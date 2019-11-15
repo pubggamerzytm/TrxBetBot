@@ -1,0 +1,7 @@
+CREATE TABLE payouts (
+	bet_address TEXT NOT NULL PRIMARY KEY,
+	end_address TEXT NOT NULL,
+    amount INTEGER NOT NULL,
+    trx_hash TEXT NOT NULL,
+	date_time DATETIME DEFAULT CURRENT_TIMESTAMP
+)

@@ -1,0 +1,6 @@
+CREATE TABLE bets (
+    bet_address TEXT NOT NULL PRIMARY KEY,
+    chars TEXT NOT NULL,
+	user_id TEXT NOT NULL,
+	date_time DATETIME DEFAULT CURRENT_TIMESTAMP
+)
