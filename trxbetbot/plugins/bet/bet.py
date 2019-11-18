@@ -9,16 +9,29 @@ from trxbetbot.plugin import TrxBetBotPlugin
 from trxbetbot.trongrid import Trongrid
 
 
+# TODO: Is it possible to have foreign key from another database? for address
 # TODO: Add leverage to message
 # TODO: Add limit check
-# TODO: Add logging output
 class Bet(TrxBetBotPlugin):
+    """
+    Workflow:
+    1) Create address and save it to
+    """
 
     tron_grid = Trongrid()
 
     def __enter__(self):
+        if not self.table_exists("addresses"):
+            sql = self.get_resource("create_addresses.sql")
+            self.execute_sql(sql)
         if not self.table_exists("bets"):
             sql = self.get_resource("create_bets.sql")
+            self.execute_sql(sql)
+        if not self.table_exists("results"):
+            sql = self.get_resource("create_results.sql")
+            self.execute_sql(sql)
+        if not self.table_exists("payouts"):
+            sql = self.get_resource("create_payouts.sql")
             self.execute_sql(sql)
         return self
 
@@ -47,6 +60,11 @@ class Bet(TrxBetBotPlugin):
         tron.private_key = account.private_key
         tron.default_address = account.address.base58
 
+        # TODO: Test
+        # Save generated address to database
+        sql = self.get_resource("insert_address.sql")
+        self.execute_sql(sql, account.address.base58, account.private_key)
+
         # Check if generated address is valid
         if not bool(tron.isAddress(account.address.hex)):
             msg = f"{emo.ERROR} Generated wallet is not valid"
@@ -74,6 +92,12 @@ class Bet(TrxBetBotPlugin):
         logging.info(msg.replace("\n", ""))
 
         update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
+
+        # TODO: Test
+        user = update.effective_user
+
+        sql = self.get_resource("insert_bet.sql")
+        self.execute_sql(sql, count.address.base58, chars, user.id)
 
         context = {"tron": tron, "chars": chars, "update": update}
         self.repeat_job(self.check_incomming, 5, context=context)

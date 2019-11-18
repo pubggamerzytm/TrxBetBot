@@ -12,6 +12,7 @@ from telegram import ChatAction, Chat
 from trxbetbot.config import ConfigManager
 
 
+# TODO: Add properties where needed
 class TrxBetBotPlugin:
 
     def __init__(self, tg_bot):
@@ -102,6 +103,7 @@ class TrxBetBotPlugin:
     def get_tron(self) -> Tron:
         return self._tgb.tron
 
+    # TODO: Maybe give the option to only check filename without extension
     def get_resource(self, filename, plugin=True):
         """ Return the content of the given file from
         the 'resource' directory of the plugin """
@@ -119,6 +121,7 @@ class TrxBetBotPlugin:
             self.notify(e)
             return None
 
+    # TODO: Describe how arguments can be used
     def execute_sql(self, sql, *args, plugin="", db_name=""):
         """ Execute raw SQL statement on database for given
         plugin and return the result if there is one """
