@@ -1,2 +1,2 @@
-INSERT INTO bets (bet_address, chars, user_id)
+INSERT INTO bets (bet_address, bet_chars, usr_id)
 VALUES (?, ?, ?)

@@ -9,13 +9,13 @@ from trxbetbot.plugin import TrxBetBotPlugin
 from trxbetbot.trongrid import Trongrid
 
 
-# TODO: Is it possible to have foreign key from another database? for address
 # TODO: Add leverage to message
 # TODO: Add limit check
 class Bet(TrxBetBotPlugin):
     """
     Workflow:
-    1) Create address and save it to
+    1) Create wallet address and save it to database table 'addresses'
+    2) ...
     """
 
     tron_grid = Trongrid()
@@ -26,12 +26,6 @@ class Bet(TrxBetBotPlugin):
             self.execute_sql(sql)
         if not self.table_exists("bets"):
             sql = self.get_resource("create_bets.sql")
-            self.execute_sql(sql)
-        if not self.table_exists("results"):
-            sql = self.get_resource("create_results.sql")
-            self.execute_sql(sql)
-        if not self.table_exists("payouts"):
-            sql = self.get_resource("create_payouts.sql")
             self.execute_sql(sql)
         return self
 
@@ -60,11 +54,6 @@ class Bet(TrxBetBotPlugin):
         tron.private_key = account.private_key
         tron.default_address = account.address.base58
 
-        # TODO: Test
-        # Save generated address to database
-        sql = self.get_resource("insert_address.sql")
-        self.execute_sql(sql, account.address.base58, account.private_key)
-
         # Check if generated address is valid
         if not bool(tron.isAddress(account.address.hex)):
             msg = f"{emo.ERROR} Generated wallet is not valid"
@@ -76,31 +65,35 @@ class Bet(TrxBetBotPlugin):
                      "addr_hex": account.address.hex,
                      "addr_base58": account.address.base58}
 
+        logging.info(f"Update: {update}")
         logging.info(f"TRX address created {generated}")
 
-        choice = "".join(chars)
-        chance = count / len(con.VALID_CHARS) * 100
+        # Save generated address to database
+        sql = self.get_resource("insert_address.sql")
+        self.execute_sql(sql, account.address.base58, account.private_key)
 
-        # TODO: Include winning amount
+        choice = "".join(sorted(chars))
+        chance = count / len(con.VALID_CHARS) * 100
+        leverage = con.LEVERAGE[len(chars)]
+
         msg = self.get_resource("betting.md")
-        msg = msg.replace("{{choice}}", "".join(sorted(choice)))
+        msg = msg.replace("{{choice}}", choice)
         msg = msg.replace("{{count}}", str(count))
         msg = msg.replace("{{chance}}", str(chance))
         msg = msg.replace("{{min}}", str(con.TRX_MIN))
         msg = msg.replace("{{max}}", str(con.TRX_MAX))
-        msg = msg.replace("{{address}}", account.address.base58)
+        msg = msg.replace("{{leverage}}", str(leverage))
         logging.info(msg.replace("\n", ""))
 
         update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
+        update.message.reply_text(f"`{account.address.base58}`", parse_mode=ParseMode.MARKDOWN)
 
-        # TODO: Test
-        user = update.effective_user
-
+        # Save bet details to database
         sql = self.get_resource("insert_bet.sql")
-        self.execute_sql(sql, count.address.base58, chars, user.id)
+        self.execute_sql(sql, account.address.base58, choice, update.effective_user.id)
 
         context = {"tron": tron, "chars": chars, "update": update}
-        self.repeat_job(self.check_incomming, 5, context=context)
+        self.repeat_job(self.check_incoming, 5, context=context)
 
     def contains_all(self, chars):
         """ Check if characters in 'chars' are all valid characters """
@@ -108,7 +101,7 @@ class Bet(TrxBetBotPlugin):
 
     # TODO: Add try catch and finally to avoid job being not removed
     # TODO: Add timer to terminate job after longer time
-    def check_incomming(self, bot, job):
+    def check_incoming(self, bot, job):
         tron = job.context["tron"]
         chars = job.context["chars"]
         update = job.context["update"]
@@ -157,22 +150,24 @@ class Bet(TrxBetBotPlugin):
                      f"")
 
         bot_addr = self.get_tron().default_address.hex
+        bet_won = last_char in chars
 
         # USER WON
-        if last_char in chars:
-            lev = con.LEVERAGE[len(chars)]
-            win = float(amount) * float(lev)
+        if bet_won:
+            leverage = con.LEVERAGE[len(chars)]
+            winnings = float(amount) * float(leverage)  # TODO: Change to amount so that i can save it
 
             # TODO: Export to resources
-            msg = f"YOU WON {amount} TRX!\n\n" \
+            msg = f"YOU WON {winnings} TRX!\n\n" \
                   f"Block Hash: `{block_hash}`\n" \
                   f"Winning Character: `{last_char}`\n" \
                   f"Your Characters: `{chars}`"
 
-            logging.info(f"Job {bet_addr58} - MSG: {msg}")
+            log_msg = msg.replace("\n", "")
+            logging.info(f"Job {bet_addr58} - MSG: {log_msg}")
 
             # Send funds from bot address to user address
-            send_user = self.get_tron().trx.send(from_hex, win)
+            send_user = self.get_tron().trx.send(from_hex, winnings)
             logging.info(f"Job {bet_addr58} - Bot to User: {send_user}")
 
             # Send funds from betting address to bot address
@@ -191,8 +186,15 @@ class Bet(TrxBetBotPlugin):
 
             logging.info(f"Job {bet_addr58} - MSG: {msg}")
 
+            # Send funds from betting address to bot address
             send_bot = tron.trx.send(bot_addr, amount)
             logging.info(f"Job {bet_addr58} - Generated to Bot: {send_bot}")
 
+        # Save betting results to database
+        sql = self.get_resource("insert_result.sql")
+        # TODO: Include trx_id
+        self.execute_sql(sql, from_base58, balance, txid, block_nr, block_hash, bet_won, amount, send_bot)
+
+        # Let user know about outcome
         update.message.reply_text(msg)
         logging.info(f"Job {bet_addr58} - Ending job")
