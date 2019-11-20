@@ -9,7 +9,6 @@ from trxbetbot.plugin import TrxBetBotPlugin
 from trxbetbot.trongrid import Trongrid
 
 
-# TODO: Add leverage to message
 # TODO: Add limit check
 class Bet(TrxBetBotPlugin):
     """
@@ -76,6 +75,7 @@ class Bet(TrxBetBotPlugin):
         chance = count / len(con.VALID_CHARS) * 100
         leverage = con.LEVERAGE[len(chars)]
 
+        # TODO: Add approximate waiting time
         msg = self.get_resource("betting.md")
         msg = msg.replace("{{choice}}", choice)
         msg = msg.replace("{{count}}", str(count))
@@ -151,6 +151,8 @@ class Bet(TrxBetBotPlugin):
 
         bot_addr = self.get_tron().default_address.hex
         bet_won = last_char in chars
+
+        # TODO: Add link to explorer when sending message to user
 
         # USER WON
         if bet_won:
