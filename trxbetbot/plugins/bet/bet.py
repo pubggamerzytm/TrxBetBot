@@ -128,20 +128,23 @@ class Bet(TrxBetBotPlugin):
             logging.info(f"Job {bet_addr58} - Balance: 0")
             return
 
+        # TODO: Do this right
         # Check if max amount is reached
         if balance > (con.TRX_MAX * 100):
+            to_much = balance
             balance = (con.TRX_MAX * 100)
 
-            warning = f"Balance of {balance} Sun is bigger then max limit of {con.TRX_MAX} Sun. " \
-                      f"Reducing betting amount to {con.TRX_MAX} and donating delta."
+            warning = f"Balance of {to_much / 100} TRX is bigger then max limit of {con.TRX_MAX} TRX. " \
+                      f"Reducing betting amount to {con.TRX_MAX} and donating delta amount."
 
             logging.info(warning)
             update.message.reply_text(warning)
 
+        # TODO: Do this right
         # Check if min amount is reached
         elif balance < (con.TRX_MIN * 100):
-            warning = f"Balance of {balance} Sun is smaller then min limit of {con.TRX_MAX} Sun. " \
-                      f"Ending betting."
+            warning = f"Balance of {balance / 100} TRX is smaller then min limit of {con.TRX_MIN} TRX. " \
+                      f"Ending bet and donating delta amount."
 
             logging.info(warning)
             update.message.reply_text(warning)
