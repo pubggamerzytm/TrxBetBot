@@ -1,3 +1,5 @@
 {
-    "handle": "bet"
+    "handle": "bet",
+    "balance_check": 10,
+    "stop_check": 1800
 }

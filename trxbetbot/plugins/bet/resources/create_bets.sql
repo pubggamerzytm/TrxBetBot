@@ -5,7 +5,7 @@ CREATE TABLE bets (
 	usr_address TEXT,
     usr_amount INTEGER,
     bet_trx_id TEXT,
-    bet_trx_block TEXT,
+    bet_trx_block INTEGER,
     bet_trx_block_hash TEXT,
     bet_won TEXT,
     pay_amount INTEGER,
