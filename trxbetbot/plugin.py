@@ -104,6 +104,7 @@ class TrxBetBotPlugin:
         return self._tgb.tron
 
     # TODO: Maybe give the option to only check filename without extension
+    # TODO: How to get a resource from another plugin?
     def get_resource(self, filename, plugin=True):
         """ Return the content of the given file from
         the 'resource' directory of the plugin """

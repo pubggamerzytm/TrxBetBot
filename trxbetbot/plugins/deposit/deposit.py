@@ -19,6 +19,7 @@ class Deposit(TrxBetBotPlugin):
 
     def __enter__(self):
         self.add_handler(CallbackQueryHandler(self._callback))
+
         if not self.table_exists("addresses"):
             sql = self.get_resource("create_addresses.sql")
             self.execute_sql(sql)
