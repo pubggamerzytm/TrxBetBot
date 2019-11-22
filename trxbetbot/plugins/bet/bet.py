@@ -193,8 +193,13 @@ class Bet(TrxBetBotPlugin):
         winnings_sun = None
         win_trx_id = None
 
-        explorer_link = f"https://tronscan.org/#/transaction/{txid}"
-        explorer_md = f"[View on Explorer]({explorer_link})"
+        trx_link = f"https://tronscan.org/#/transaction/{txid}"
+        blk_link = f"https://tronscan.org/#/block/{block_nr}"
+
+        trx_md = f"[Transaction]({trx_link})"
+        blk_md = f"[Block]({blk_link})"
+
+        explorer = f"{blk_md} | {trx_md}"
 
         # USER WON
         if bet_won:
@@ -204,7 +209,7 @@ class Bet(TrxBetBotPlugin):
 
             msg = self.get_resource("won.md")
             msg = msg.replace("{{winnings}}", str(winnings_trx))
-            msg = msg.replace("{{explorer}}", explorer_md)
+            msg = msg.replace("{{explorer}}", explorer)
             msg = msg.replace("{{last_char}}", last_char)
             msg = msg.replace("{{chars}}", choice)
 
@@ -220,7 +225,7 @@ class Bet(TrxBetBotPlugin):
         # BOT WON
         else:
             msg = self.get_resource("lost.md")
-            msg = msg.replace("{{explorer}}", explorer_md)
+            msg = msg.replace("{{explorer}}", explorer)
             msg = msg.replace("{{last_char}}", last_char)
             msg = msg.replace("{{chars}}", choice)
 
