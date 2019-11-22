@@ -7,11 +7,15 @@ from trx_utils import is_address
 from trxbetbot.plugin import TrxBetBotPlugin
 
 
+# TODO: Do i ever need to account for a fee?
 class Withdraw(TrxBetBotPlugin):
 
     def __enter__(self):
         if not self.table_exists("addresses", plugin="deposit"):
             sql = self.get_resource("create_addresses.sql")
+            self.execute_sql(sql)
+        if not self.table_exists("withdrawals"):
+            sql = self.get_resource("create_withdrawals.sql")
             self.execute_sql(sql)
         return self
 
@@ -26,7 +30,7 @@ class Withdraw(TrxBetBotPlugin):
 
         address = args[0]
 
-        # Check if generated address is valid
+        # Check if provided address is valid
         if not bool(is_address(address)):
             msg = f"{emo.ERROR} Provided TRX wallet is not valid"
             update.message.reply_text(msg)
@@ -53,11 +57,19 @@ class Withdraw(TrxBetBotPlugin):
             balance = tron.trx.get_balance()
             amount = tron.fromSun(balance)
 
-            send_bot = tron.trx.send(address, float(amount))
-            trans_id = send_bot["transaction"]["txID"]
+            send = tron.trx.send(address, float(amount))
+            txid = send["transaction"]["txID"]
 
-            # TODO: Check if successfull und if yes ...
-            # TODO: Show success / error message and link to BlockExplorer
+            explorer_link = f"https://tronscan.org/#/transaction/{txid}"
+            msg = f"{emo.DONE} [Successfully sent {amount} TRX]({explorer_link})\n" \
+                  f"(Link will work after ~1 minute)"
+
+            update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN, disable_web_page_preview=True)
+
+            logging.info(f"Withdraw {amount} TRX from {data[0][1]} to {address}")
+
+            sql = self.get_resource("insert_withdrawal.sql")
+            self.execute_sql(sql, data[0][1], address, int(balance))
         else:
             msg = f"{emo.ERROR} You don't have a wallet yet. Create one with /deposit"
             update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
