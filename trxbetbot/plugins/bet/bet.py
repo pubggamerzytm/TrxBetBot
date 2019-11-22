@@ -10,6 +10,7 @@ from trxbetbot.plugin import TrxBetBotPlugin
 from trxbetbot.trongrid import Trongrid
 
 
+# TODO: Add config param to sleep for x before checking balance first time
 # TODO: Why don't min and max checks work?
 # TODO: Add admin notifications for errors
 class Bet(TrxBetBotPlugin):
