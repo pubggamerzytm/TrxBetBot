@@ -11,5 +11,11 @@ from trxbetbot.trongrid import Trongrid
 
 class Tip(TrxBetBotPlugin):
 
+    @TrxBetBotPlugin.threaded
+    @TrxBetBotPlugin.send_typing
     def execute(self, bot, update, args):
-        pass
+        if len(args) != 2:
+            update.message.reply_text(
+                text=f"Usage:\n{self.get_usage()}",
+                parse_mode=ParseMode.MARKDOWN)
+            return
