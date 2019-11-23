@@ -103,16 +103,11 @@ class TrxBetBotPlugin:
     def get_tron(self) -> Tron:
         return self._tgb.tron
 
-    # TODO: Maybe give the option to only check filename without extension
-    # TODO: How to get a resource from another plugin?
-    def get_resource(self, filename, plugin=True):
-        """ Return the content of the given file from
-        the 'resource' directory of the plugin """
+    def get_global_resource(self, filename):
+        """ Return the content of the given file
+        from the global 'resource' directory """
 
-        if plugin:
-            path = os.path.join(self.get_res_path(), filename)
-        else:
-            path = os.path.join(c.DIR_RES, filename)
+        path = os.path.join(os.getcwd(), c.DIR_RES, filename)
 
         try:
             with open(path, "r", encoding="utf8") as f:
@@ -121,6 +116,65 @@ class TrxBetBotPlugin:
             logging.error(e)
             self.notify(e)
             return None
+
+    # TODO: Maybe give the option to only check filename without extension
+    def get_resource(self, filename, plugin=""):
+        """ Return the content of the given file from
+        the 'resource' directory of the plugin """
+        path = os.path.join(self.get_res_path(plugin), filename)
+
+        try:
+            with open(path, "r", encoding="utf8") as f:
+                return f.read()
+        except Exception as e:
+            logging.error(e)
+            self.notify(e)
+            return None
+
+    def execute_global_sql(self, sql, *args):
+        """ Execute raw SQL statement on the global
+        database and return the result if there is one """
+
+        res = {"success": None, "data": None}
+
+        # Check if database usage is enabled
+        if not self.global_config.get("database", "use_db"):
+            res["data"] = "Database disabled"
+            res["success"] = False
+            return res
+
+        db_path = os.path.join(os.getcwd(), c.DIR_DAT, c.FILE_DAT)
+
+        try:
+            # Create directory if it doesn't exist
+            directory = os.path.dirname(db_path)
+            os.makedirs(directory, exist_ok=True)
+        except Exception as e:
+            res["data"] = str(e)
+            res["success"] = False
+            logging.error(e)
+            self.notify(e)
+
+        con = None
+
+        try:
+            con = sqlite3.connect(db_path)
+            cur = con.cursor()
+            cur.execute(sql, args)
+            con.commit()
+
+            res["data"] = cur.fetchall()
+            res["success"] = True
+        except Exception as e:
+            res["data"] = str(e)
+            res["success"] = False
+            logging.error(e)
+            self.notify(e)
+        finally:
+            if con:
+                con.close()
+
+            return res
 
     # TODO: Describe how arguments can be used
     def execute_sql(self, sql, *args, plugin="", db_name=""):
@@ -182,6 +236,29 @@ class TrxBetBotPlugin:
 
             return res
 
+    def global_table_exists(self, table_name):
+        """ Return TRUE if given table exists in global database, otherwise FALSE """
+        db_path = os.path.join(os.getcwd(), c.DIR_DAT, c.FILE_DAT)
+
+        if not Path(db_path).is_file():
+            return False
+
+        con = sqlite3.connect(db_path)
+        cur = con.cursor()
+        exists = False
+
+        statement = self.get_global_resource("table_exists.sql")
+
+        try:
+            if cur.execute(statement, [table_name]).fetchone():
+                exists = True
+        except Exception as e:
+            logging.error(e)
+            self.notify(e)
+
+        con.close()
+        return exists
+
     def table_exists(self, table_name, plugin="", db_name=""):
         """ Return TRUE if given table exists, otherwise FALSE """
         if db_name:
@@ -205,7 +282,7 @@ class TrxBetBotPlugin:
         cur = con.cursor()
         exists = False
 
-        statement = self.get_resource("table_exists.sql", plugin=False)
+        statement = self.get_global_resource("table_exists.sql")
 
         try:
             if cur.execute(statement, [table_name]).fetchone():

@@ -7,29 +7,42 @@ from trx_utils import is_address
 from trxbetbot.plugin import TrxBetBotPlugin
 
 
+# TODO: Test this
 # TODO: Do i ever need to account for a fee?
-class Withdraw(TrxBetBotPlugin):
+class Send(TrxBetBotPlugin):
 
     def __enter__(self):
-        if not self.table_exists("withdrawals"):
-            sql = self.get_resource("create_withdrawals.sql")
+        if not self.table_exists("sent"):
+            sql = self.get_resource("create_sent.sql")
             self.execute_sql(sql)
         return self
 
     @TrxBetBotPlugin.threaded
     @TrxBetBotPlugin.send_typing
     def execute(self, bot, update, args):
-        if len(args) != 1:
+        if len(args) != 2:
             update.message.reply_text(
                 text=f"Usage:\n{self.get_usage()}",
                 parse_mode=ParseMode.MARKDOWN)
             return
 
-        address = args[0]
+        amount = args[0]
+
+        # Check if amount is valid
+        try:
+            float(amount)
+        except:
+            msg = f"{emo.ERROR} Provided amount is not valid"
+            logging.info(f"{msg} - {amount}")
+            update.message.reply_text(msg)
+            return
+
+        address = args[1]
 
         # Check if provided address is valid
         if not bool(is_address(address)):
-            msg = f"{emo.ERROR} Provided TRX wallet is not valid"
+            msg = f"{emo.ERROR} Provided wallet is not valid"
+            logging.info(f"{msg} - {address}")
             update.message.reply_text(msg)
             return
 
@@ -51,7 +64,14 @@ class Withdraw(TrxBetBotPlugin):
         tron = Tron(**trx_kwargs)
 
         balance = tron.trx.get_balance()
-        amount = tron.fromSun(balance)
+        available_amount = tron.fromSun(balance)
+
+        # Check if address has enough balance
+        if float(amount) > float(available_amount):
+            msg = f"{emo.ERROR} Not enough funds. You balance is {available_amount} TRX"
+            logging.info(f"{msg} - {data[0][1]}")
+            update.message.reply_text(msg)
+            return
 
         send = tron.trx.send(address, float(amount))
         txid = send["transaction"]["txID"]
@@ -62,7 +82,7 @@ class Withdraw(TrxBetBotPlugin):
 
         update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN, disable_web_page_preview=True)
 
-        logging.info(f"Withdraw {amount} TRX from {data[0][1]} to {address}")
+        logging.info(f"Sent {amount} TRX from {data[0][1]} to {address}")
 
-        sql = self.get_resource("insert_withdrawal.sql")
+        sql = self.get_resource("insert_sent.sql")
         self.execute_sql(sql, data[0][1], address, int(balance))

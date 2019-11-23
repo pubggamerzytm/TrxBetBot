@@ -18,6 +18,7 @@ DIR_DAT = "data"
 DIR_TMP = "temp"
 
 # Project files
+FILE_DAT = "global.db"
 FILE_CFG = "config.json"
 FILE_TKN = "token.json"
 FILE_TRX = "wallet.json"

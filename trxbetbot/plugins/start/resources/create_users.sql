@@ -4,5 +4,7 @@ CREATE TABLE users (
 	first_name TEXT NOT NULL,
 	last_name TEXT,
 	language TEXT,
-	date_time DATETIME DEFAULT CURRENT_TIMESTAMP
+	address TEXT NOT NULL,
+	date_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+	FOREIGN KEY(address) REFERENCES addresses(address)
 )

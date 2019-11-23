@@ -7,7 +7,6 @@ import trxbetbot.constants as con
 from telegram import ParseMode, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import CallbackQueryHandler
 from trxbetbot.plugin import TrxBetBotPlugin
-from tronapi import Tron
 from MyQR import myqr
 
 
@@ -19,10 +18,6 @@ class Deposit(TrxBetBotPlugin):
 
     def __enter__(self):
         self.add_handler(CallbackQueryHandler(self._callback))
-
-        if not self.table_exists("addresses"):
-            sql = self.get_resource("create_addresses.sql")
-            self.execute_sql(sql)
         return self
 
     @TrxBetBotPlugin.threaded
@@ -30,35 +25,21 @@ class Deposit(TrxBetBotPlugin):
     def execute(self, bot, update, args):
         user_id = update.effective_user.id
 
-        sql = self.get_resource("select_address.sql")
-        res = self.execute_sql(sql, user_id)
+        sql = self.get_global_resource("select_address.sql")
+        res = self.execute_global_sql(sql, user_id)
 
         if not res["success"]:
             # TODO: show error
             return
 
-        data = res["data"]
+        address = res["data"][0][1]
+        privkey = res["data"][0][2]
 
-        if data:
-            address = data[0][1]
-            privkey = data[0][2]
-
-            logging.info(f"Retrieved: address {address} - private key {privkey} - {update}")
-        else:
-            tron = Tron()
-            account = tron.create_account
-
-            address = account.address.base58
-            privkey = account.private_key
-
-            logging.info(f"Created: address {address} - private key {privkey} - {update}")
-
-            sql = self.get_resource("insert_address.sql")
-            self.execute_sql(sql, user_id, address, privkey)
-
+        # Create directory for qr-code images
         qr_dir = os.path.join(self.get_plg_path(), self.QRCODES_DIR)
         os.makedirs(qr_dir, exist_ok=True)
 
+        # Get file and path of qr-code image
         qr_name = f"{user_id}.png"
         qr_code = os.path.join(qr_dir, qr_name)
 

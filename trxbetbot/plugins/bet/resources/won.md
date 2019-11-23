@@ -1,4 +1,4 @@
-YOU WON! Total: `{{winnings}}` TRX
+*YOU WON!* Total: `{{winnings}}` TRX
 
 {{explorer}}  
 Winning Character: `{{last_char}}`  
