@@ -4,7 +4,7 @@ from trxbetbot.plugin import TrxBetBotPlugin
 
 class About(TrxBetBotPlugin):
 
-    INFO_FILE = "betting.md"
+    INFO_FILE = "info.md"
 
     @TrxBetBotPlugin.threaded
     @TrxBetBotPlugin.send_typing

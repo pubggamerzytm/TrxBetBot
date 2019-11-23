@@ -1,4 +1,4 @@
-✨ *Bismuth Bauer Bot* ✨  
+✨ *TrxBetBot* ✨  
 Please visit the [website](https://bismuth.cz) to get detailed information about Bismuth.  
 
 🔹 *Development*  
