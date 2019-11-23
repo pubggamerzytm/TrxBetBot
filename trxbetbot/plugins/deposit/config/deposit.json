@@ -1,3 +1,5 @@
 {
-    "handle": "deposit"
+    "handle": "deposit",
+    "category": "Wallet",
+    "description": "Deposit TRX to your bot wallet"
 }

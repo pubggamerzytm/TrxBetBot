@@ -1,7 +1,6 @@
 import time
 import logging
 import trxbetbot.emoji as emo
-import trxbetbot.constants as con
 
 from tronapi import Tron
 from tronapi.main import Address
@@ -14,11 +13,14 @@ from trxbetbot.trongrid import Trongrid
 # TODO: Why don't min and max checks work?
 # TODO: Add admin notifications for errors
 class Bet(TrxBetBotPlugin):
-    """
-    Workflow:
-    1) Create wallet address and save it to database table 'addresses'
-    2) ...
-    """
+
+    TRX_MIN = 10
+    TRX_MAX = 10000
+
+    # Betting
+    VALID_CHARS = "0123456789abcdef"
+    LEVERAGE = {1: 15.2, 2: 7.6, 3: 5.06, 4: 3.8, 5: 3.04, 6: 2.53, 7: 2.17, 8: 1.9,
+                9: 1.68, 10: 1.52, 11: 1.38, 12: 1.26, 13: 1.16, 14: 1.08, 15: 1.01}
 
     tron_grid = Trongrid()
 
@@ -42,12 +44,12 @@ class Bet(TrxBetBotPlugin):
         count = len(chars)
 
         if not self.contains_all(chars):
-            msg = f"{emo.ERROR} You can only bet on one or more of these characters `{con.VALID_CHARS}`"
+            msg = f"{emo.ERROR} You can only bet on one or more of these characters `{self.VALID_CHARS}`"
             update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             return
 
         if count > 15:
-            msg = f"{emo.ERROR} Max characters to bet on is {len(con.VALID_CHARS)-1}"
+            msg = f"{emo.ERROR} Max characters to bet on is {len(self.VALID_CHARS)-1}"
             update.message.reply_text(msg)
             return
 
@@ -75,15 +77,15 @@ class Bet(TrxBetBotPlugin):
         self.execute_sql(sql, account.address.base58, account.private_key)
 
         choice = "".join(sorted(chars))
-        chance = count / len(con.VALID_CHARS) * 100
-        leverage = con.LEVERAGE[len(chars)]
+        chance = count / len(self.VALID_CHARS) * 100
+        leverage = self.LEVERAGE[len(chars)]
 
         msg = self.get_resource("betting.md")
         msg = msg.replace("{{choice}}", choice)
         msg = msg.replace("{{count}}", str(count))
         msg = msg.replace("{{chance}}", str(chance))
-        msg = msg.replace("{{min}}", str(con.TRX_MIN))
-        msg = msg.replace("{{max}}", str(con.TRX_MAX))
+        msg = msg.replace("{{min}}", str(self.TRX_MIN))
+        msg = msg.replace("{{max}}", str(self.TRX_MAX))
         msg = msg.replace("{{leverage}}", str(leverage))
         logging.info(msg.replace("\n", ""))
 
@@ -94,13 +96,16 @@ class Bet(TrxBetBotPlugin):
         sql = self.get_resource("insert_bet.sql")
         self.execute_sql(sql, account.address.base58, choice, update.effective_user.id)
 
+        first = self.config.get("check_start")
         check = self.config.get("balance_check")
         context = {"tron": tron, "choice": choice, "update": update, "start": time.time()}
-        self.repeat_job(self.scan_balance, check, context=context)
+        self.repeat_job(self.scan_balance, check, first=first, context=context)
+
+        logging.info(f"Initiated repeating job for {account.address.base58}")
 
     def contains_all(self, chars):
         """ Check if characters in 'chars' are all valid characters """
-        return 0 not in [c in con.VALID_CHARS for c in chars]
+        return 0 not in [c in self.VALID_CHARS for c in chars]
 
     # TODO: Add try catch and finally to avoid job being not removed
     def scan_balance(self, bot, job):
@@ -131,20 +136,20 @@ class Bet(TrxBetBotPlugin):
 
         # TODO: Do this right
         # Check if max amount is reached
-        if balance > (con.TRX_MAX * 100):
+        if balance > (self.TRX_MAX * 100):
             to_much = balance
-            balance = (con.TRX_MAX * 100)
+            balance = (self.TRX_MAX * 100)
 
-            warning = f"Balance of {to_much / 100} TRX is bigger then max limit of {con.TRX_MAX} TRX. " \
-                      f"Reducing betting amount to {con.TRX_MAX} and donating delta amount."
+            warning = f"Balance of {to_much / 100} TRX is bigger then max limit of {self.TRX_MAX} TRX. " \
+                      f"Reducing betting amount to {self.TRX_MAX} and donating delta amount."
 
             logging.info(warning)
             update.message.reply_text(warning)
 
         # TODO: Do this right
         # Check if min amount is reached
-        elif balance < (con.TRX_MIN * 100):
-            warning = f"Balance of {balance / 100} TRX is smaller then min limit of {con.TRX_MIN} TRX. " \
+        elif balance < (self.TRX_MIN * 100):
+            warning = f"Balance of {balance / 100} TRX is smaller then min limit of {self.TRX_MIN} TRX. " \
                       f"Ending bet and donating delta amount."
 
             logging.info(warning)
@@ -201,9 +206,9 @@ class Bet(TrxBetBotPlugin):
 
         explorer = f"{blk_md} | {trx_md}"
 
-        # USER WON
+        # USER WON ---------------
         if bet_won:
-            leverage = con.LEVERAGE[len(choice)]
+            leverage = self.LEVERAGE[len(choice)]
             winnings_sun = int(balance * leverage)
             winnings_trx = tron.fromSun(winnings_sun)
 
@@ -222,7 +227,7 @@ class Bet(TrxBetBotPlugin):
 
             win_trx_id = send_user["transaction"]["txID"]
 
-        # BOT WON
+        # BOT WON ---------------
         else:
             msg = self.get_resource("lost.md")
             msg = msg.replace("{{explorer}}", explorer)

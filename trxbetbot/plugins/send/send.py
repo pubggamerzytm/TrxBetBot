@@ -7,14 +7,13 @@ from trx_utils import is_address
 from trxbetbot.plugin import TrxBetBotPlugin
 
 
-# TODO: Test this
 # TODO: Do i ever need to account for a fee?
 class Send(TrxBetBotPlugin):
 
     def __enter__(self):
-        if not self.table_exists("sent"):
+        if not self.global_table_exists("sent"):
             sql = self.get_resource("create_sent.sql")
-            self.execute_sql(sql)
+            self.execute_global_sql(sql)
         return self
 
     @TrxBetBotPlugin.threaded
@@ -85,4 +84,4 @@ class Send(TrxBetBotPlugin):
         logging.info(f"Sent {amount} TRX from {data[0][1]} to {address}")
 
         sql = self.get_resource("insert_sent.sql")
-        self.execute_sql(sql, data[0][1], address, int(balance))
+        self.execute_global_sql(sql, data[0][1], address, int(balance))

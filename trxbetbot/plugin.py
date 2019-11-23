@@ -85,9 +85,11 @@ class TrxBetBotPlugin:
     def repeat_job(self, callback, interval, first=0, context=None):
         """ Logic that gets executed periodically """
         self._tgb.job_queue.run_repeating(
-            callback, interval, first=first, name=self.get_name(), context=context)
-
-        logging.info(f"Started repeating job '{self.get_name()}'")
+            callback,
+            interval,
+            first=first,
+            name=self.get_name(),
+            context=context)
 
     def add_handler(self, handler, group=0):
         self._tgb.dispatcher.add_handler(handler, group=group)

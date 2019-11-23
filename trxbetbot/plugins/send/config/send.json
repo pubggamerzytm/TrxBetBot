@@ -1,3 +1,5 @@
 {
-    "handle": "send"
+    "handle": "send",
+    "category": "Wallet",
+    "description": "Send TRX from bot wallet"
 }

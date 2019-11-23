@@ -1,3 +1,5 @@
 {
-    "handle": "balance"
+    "handle": "balance",
+    "category": "Wallet",
+    "description": "Show balance of your bot wallet"
 }

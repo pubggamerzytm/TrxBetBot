@@ -11,9 +11,9 @@ from trxbetbot.plugin import TrxBetBotPlugin
 class Withdraw(TrxBetBotPlugin):
 
     def __enter__(self):
-        if not self.table_exists("withdrawals"):
+        if not self.global_table_exists("withdrawals"):
             sql = self.get_resource("create_withdrawals.sql")
-            self.execute_sql(sql)
+            self.execute_global_sql(sql)
         return self
 
     @TrxBetBotPlugin.threaded
@@ -65,4 +65,4 @@ class Withdraw(TrxBetBotPlugin):
         logging.info(f"Withdraw {amount} TRX from {data[0][1]} to {address}")
 
         sql = self.get_resource("insert_withdrawal.sql")
-        self.execute_sql(sql, data[0][1], address, int(balance))
+        self.execute_global_sql(sql, data[0][1], address, int(balance))
