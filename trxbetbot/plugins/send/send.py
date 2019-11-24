@@ -32,7 +32,7 @@ class Send(TrxBetBotPlugin):
             float(amount)
         except:
             msg = f"{emo.ERROR} Provided amount is not valid"
-            logging.info(f"{msg} - {amount}")
+            logging.info(f"{msg} - {update}")
             update.message.reply_text(msg)
             return
 
@@ -41,7 +41,7 @@ class Send(TrxBetBotPlugin):
         # Check if provided address is valid
         if not bool(is_address(address)):
             msg = f"{emo.ERROR} Provided wallet is not valid"
-            logging.info(f"{msg} - {address}")
+            logging.info(f"{msg} - {update}")
             update.message.reply_text(msg)
             return
 
@@ -68,7 +68,7 @@ class Send(TrxBetBotPlugin):
         # Check if address has enough balance
         if float(amount) > float(available_amount):
             msg = f"{emo.ERROR} Not enough funds. You balance is {available_amount} TRX"
-            logging.info(f"{msg} - {data[0][1]}")
+            logging.info(f"{msg} - {data[0][1]} - {update}")
             update.message.reply_text(msg)
             return
 
@@ -81,7 +81,7 @@ class Send(TrxBetBotPlugin):
 
         update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN, disable_web_page_preview=True)
 
-        logging.info(f"Sent {amount} TRX from {data[0][1]} to {address}")
+        logging.info(f"Sent {amount} TRX from {data[0][1]} to {address} - {update}")
 
         sql = self.get_resource("insert_sent.sql")
         self.execute_global_sql(sql, data[0][1], address, int(balance))

@@ -62,7 +62,7 @@ class Withdraw(TrxBetBotPlugin):
 
         update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN, disable_web_page_preview=True)
 
-        logging.info(f"Withdraw {amount} TRX from {data[0][1]} to {address}")
+        logging.info(f"Withdraw {amount} TRX from {data[0][1]} to {address} - {update}")
 
         sql = self.get_resource("insert_withdrawal.sql")
         self.execute_global_sql(sql, data[0][1], address, int(balance))

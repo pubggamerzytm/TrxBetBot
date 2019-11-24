@@ -5,6 +5,7 @@ from telegram import ParseMode
 from trxbetbot.plugin import TrxBetBotPlugin
 
 
+# TODO: Make username primary key, not user_id
 class Start(TrxBetBotPlugin):
 
     ABOUT_FILE = "about.md"
