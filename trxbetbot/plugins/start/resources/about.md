@@ -1,9 +1,7 @@
 ✨ *Tron Betting Bot* ✨
 
-Welcome to TrxBetBot! I'm a bot and if you want to tip someone or if you want to let it rain BIS coins for the Bismuth Telegram community then i will help you out doing that.
+Welcome to TrxBetBot! A Tronix (TRX) wallet has been created for you. This is your wallet address:  
 
-Click on /help to see all available commands with a short description or on /about to get more info about me.
-
-If you need more info on how to use the commands, just execute one of them and i will let you know about the arguments that you need to provide.
+`{{address}}`
 
 Cheers 🍻👋

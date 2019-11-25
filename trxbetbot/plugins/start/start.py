@@ -25,36 +25,44 @@ class Start(TrxBetBotPlugin):
 
         exists = self.get_resource("user_exists.sql")
         if self.execute_global_sql(exists, user.id)["data"][0][0] == 1:
-            return "User already exists"
+            sql = self.get_global_resource("select_address.sql")
+            res = self.execute_global_sql(sql, user.id)
 
-        tron = Tron()
-        account = tron.create_account
-        address = account.address.base58
-        privkey = account.private_key
+            if not res["success"]:
+                # TODO: show error
+                return
 
-        logging.info(f"Created Address: {address} - Private Key: {privkey} - Update: {update}")
+            address = res["data"][0][1]
 
-        insert = self.get_resource("insert_address.sql")
-        result = self.execute_global_sql(
-            insert,
-            user.id,
-            address,
-            privkey)
+            logging.info(f"User already exists - Address: {address} - {update}")
+        else:
+            tron = Tron()
+            account = tron.create_account
+            address = account.address.base58
+            privkey = account.private_key
 
-        logging.info(f"Insert Address: {user} {result}")
+            logging.info(f"Created Address: {address} - Private Key: {privkey} - Update: {update}")
 
-        insert = self.get_resource("insert_user.sql")
-        result = self.execute_global_sql(
-            insert,
-            user.id,
-            user.username,
-            user.first_name,
-            user.last_name,
-            user.language_code,
-            address)
+            insert = self.get_resource("insert_address.sql")
+            result = self.execute_global_sql(
+                insert,
+                user.id,
+                address,
+                privkey)
 
-        logging.info(f"Insert User: {user} {result}")
+            logging.info(f"Insert Address: {user} {result}")
 
-        update.message.reply_text(
-            text=self.get_resource(self.ABOUT_FILE),
-            parse_mode=ParseMode.MARKDOWN)
+            insert = self.get_resource("insert_user.sql")
+            result = self.execute_global_sql(
+                insert,
+                user.id,
+                user.username,
+                user.first_name,
+                user.last_name,
+                user.language_code,
+                address)
+
+            logging.info(f"Insert User: {user} {result}")
+
+        about = self.get_resource(self.ABOUT_FILE).replace("{{address}}", address)
+        update.message.reply_text(about, parse_mode=ParseMode.MARKDOWN)
