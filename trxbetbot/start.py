@@ -9,6 +9,8 @@ from trxbetbot.config import ConfigManager as Cfg
 from logging.handlers import TimedRotatingFileHandler
 
 
+# TODO: All commands that interact with the wallet need to generate a new
+# address if there is non for the user. Could be if user uses bot in a group
 # TODO: In case database will be removed on the fly, check if user / address is
 # available and if not, create them
 class TrxBetBot:
