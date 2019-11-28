@@ -94,6 +94,11 @@ class Tip(TrxBetBotPlugin):
 
         try:
             send = tron.trx.send(to_address, float(amount))
+
+            if "transaction" not in send:
+                logging.error(send)
+                raise Exception("key 'transaction' not in send result")
+
             txid = send["transaction"]["txID"]
 
             explorer_link = f"https://tronscan.org/#/transaction/{txid}"
@@ -125,7 +130,6 @@ class Tip(TrxBetBotPlugin):
             sql = self.get_resource("insert_tip.sql")
             self.execute_global_sql(sql, from_user_id, to_user_id, sent_amount)
         except Exception as e:
-            msg = f"{emo.ERROR} Couldn't send `{amount}` TRX. Try removing fee of {con.TRX_FEE} TRX"
+            msg = f"{emo.ERROR} Balance not sufficient. Try removing fee of {con.TRX_FEE} TRX"
             update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             logging.error(e)
-            self.notify(e)
