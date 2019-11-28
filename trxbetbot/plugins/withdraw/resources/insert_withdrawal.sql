@@ -1,2 +1,2 @@
-INSERT INTO withdrawals (form_address, to_address, amount)
+INSERT INTO withdrawals (from_address, to_address, amount)
 VALUES (?, ?, ?)
