@@ -4,5 +4,7 @@
     "description": "Bet TRX on last char of block hash",
     "check_start": 60,
     "balance_check": 20,
-    "stop_check": 900
+    "stop_check": 900,
+    "clean_losses": 3600,
+    "loss_messages": []
 }

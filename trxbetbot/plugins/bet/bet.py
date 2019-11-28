@@ -30,6 +30,13 @@ class Bet(TrxBetBotPlugin):
         if not self.table_exists("bets"):
             sql = self.get_resource("create_bets.sql")
             self.execute_sql(sql)
+
+        clean_losses = self.config.get("clean_losses")
+
+        if clean_losses:
+            # Create background job that removes messages related to losses
+            self.repeat_job(self.remove_losses, clean_losses)
+
         return self
 
     @TrxBetBotPlugin.threaded
@@ -101,6 +108,15 @@ class Bet(TrxBetBotPlugin):
         self.repeat_job(self.scan_balance, check, first=first, context=context)
 
         logging.info(f"Initiated repeating job for {account.address.base58}")
+
+    def remove_losses(self, bot, job):
+        for msg in self.config.get("loss_messages"):
+            try:
+                bot.delete_message(chat_id=msg['chat_id'], message_id=msg['msg_id'])
+                logging.info(f"Loss message removed: {msg}")
+            except:
+                pass
+        self.config.set(list(), "loss_messages")
 
     def contains_all(self, chars):
         """ Check if characters in 'chars' are all valid characters """
@@ -247,9 +263,13 @@ class Bet(TrxBetBotPlugin):
             bet_addr58)
 
         # Let user know about outcome
-        update.message.reply_text(
+        message = update.message.reply_text(
             msg,
             parse_mode=ParseMode.MARKDOWN,
             disable_web_page_preview=True)
+
+        msg_list = self.config.get("loss_messages")
+        msg_list.append({"chat_id": message.chat_id, "msg_id": message.message_id})
+        self.config.set(msg_list, "loss_messages")
 
         logging.info(f"Job {bet_addr58} - Ending job")
