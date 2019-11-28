@@ -130,6 +130,11 @@ class Tip(TrxBetBotPlugin):
             sql = self.get_resource("insert_tip.sql")
             self.execute_global_sql(sql, from_user_id, to_user_id, sent_amount)
         except Exception as e:
-            msg = f"{emo.ERROR} Balance not sufficient. Try removing fee of {con.TRX_FEE} TRX"
-            update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             logging.error(e)
+
+            if str(e) == "key 'transaction' not in send result":
+                msg = f"{emo.ERROR} Balance not sufficient. Try removing fee of `{con.TRX_FEE}` TRX"
+                update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
+            else:
+                update.message.reply_text(f"{emo.ERROR} {repr(e)}")
+                self.notify(e)

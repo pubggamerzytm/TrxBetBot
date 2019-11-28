@@ -1,5 +1,6 @@
 import logging
 import trxbetbot.emoji as emo
+import trxbetbot.constants as con
 
 from tronapi import Tron
 from telegram import ParseMode
@@ -7,7 +8,6 @@ from trx_utils import is_address
 from trxbetbot.plugin import TrxBetBotPlugin
 
 
-# TODO: Integrate fee!
 class Send(TrxBetBotPlugin):
 
     def __enter__(self):
@@ -72,16 +72,31 @@ class Send(TrxBetBotPlugin):
             update.message.reply_text(msg)
             return
 
-        send = tron.trx.send(address, float(amount))
-        txid = send["transaction"]["txID"]
+        try:
+            send = tron.trx.send(address, float(amount))
 
-        explorer_link = f"https://tronscan.org/#/transaction/{txid}"
-        msg = f"{emo.DONE} [Successfully sent {amount} TRX]({explorer_link})\n" \
-              f"(Link will work after ~1 minute)"
+            if "transaction" not in send:
+                logging.error(send)
+                raise Exception("key 'transaction' not in send result")
 
-        update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN, disable_web_page_preview=True)
+            txid = send["transaction"]["txID"]
 
-        logging.info(f"Sent {amount} TRX from {data[0][1]} to {address} - {update}")
+            explorer_link = f"https://tronscan.org/#/transaction/{txid}"
+            msg = f"{emo.DONE} Successfully sent `{amount}` TRX. [View " \
+                  f"on Block Explorer]({explorer_link}) (wait ~1 minute)"
 
-        sql = self.get_resource("insert_sent.sql")
-        self.execute_global_sql(sql, data[0][1], address, int(balance))
+            update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN, disable_web_page_preview=True)
+
+            logging.info(f"Sent {amount} TRX from {data[0][1]} to {address} - {update}")
+
+            sql = self.get_resource("insert_sent.sql")
+            self.execute_global_sql(sql, data[0][1], address, int(balance))
+        except Exception as e:
+            logging.error(e)
+
+            if str(e) == "key 'transaction' not in send result":
+                msg = f"{emo.ERROR} Balance not sufficient. Try removing fee of `{con.TRX_FEE}` TRX"
+                update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
+            else:
+                update.message.reply_text(f"{emo.ERROR} {repr(e)}")
+                self.notify(e)

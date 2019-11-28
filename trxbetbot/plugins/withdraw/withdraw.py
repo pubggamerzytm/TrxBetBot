@@ -1,5 +1,6 @@
 import logging
 import trxbetbot.emoji as emo
+import trxbetbot.constants as con
 
 from tronapi import Tron
 from telegram import ParseMode
@@ -7,7 +8,6 @@ from trx_utils import is_address
 from trxbetbot.plugin import TrxBetBotPlugin
 
 
-# TODO: Integrate fee!
 class Withdraw(TrxBetBotPlugin):
 
     def __enter__(self):
@@ -53,12 +53,26 @@ class Withdraw(TrxBetBotPlugin):
         balance = tron.trx.get_balance()
         amount = tron.fromSun(balance)
 
-        send = tron.trx.send(address, float(amount))
-        txid = send["transaction"]["txID"]
+        try:
+            send = tron.trx.send(address, float(amount))
+            txid = send["transaction"]["txID"]
+        except Exception as e:
+            logging.error(f"Couldn't withdraw full amount - {e}")
+
+            amount = float(amount) - con.TRX_FEE
+
+            try:
+                send = tron.trx.send(address, amount)
+                txid = send["transaction"]["txID"]
+            except Exception as e:
+                logging.error(f"Couldn't withdraw full amount minus fee - {e}")
+                msg = f"{emo.ERROR} Couldn't withdraw: {repr(e)} - Try /send command"
+                update.message.reply_text(msg)
+                return
 
         explorer_link = f"https://tronscan.org/#/transaction/{txid}"
-        msg = f"{emo.DONE} [Successfully sent {amount} TRX]({explorer_link})\n" \
-              f"(Link will work after ~1 minute)"
+        msg = f"{emo.DONE} Successfully withdrawn `{amount}` TRX. [View " \
+              f"on Block Explorer]({explorer_link}) (wait ~1 minute)"
 
         update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN, disable_web_page_preview=True)
 
