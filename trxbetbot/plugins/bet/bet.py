@@ -9,9 +9,8 @@ from trxbetbot.plugin import TrxBetBotPlugin
 from trxbetbot.trongrid import Trongrid
 
 
-# TODO: Add config param to sleep for x before checking balance first time
-# TODO: Why don't min and max checks work?
-# TODO: Add admin notifications for errors
+# TODO: Test MIN and MAX
+# TODO: Add admin notifications for errors everywhere
 class Bet(TrxBetBotPlugin):
 
     TRX_MIN = 10
@@ -134,7 +133,6 @@ class Bet(TrxBetBotPlugin):
             logging.info(f"Job {bet_addr58} - Balance: 0")
             return
 
-        # TODO: Do this right
         # Check if max amount is reached
         if balance > (self.TRX_MAX * 100):
             to_much = balance
@@ -146,7 +144,6 @@ class Bet(TrxBetBotPlugin):
             logging.info(warning)
             update.message.reply_text(warning)
 
-        # TODO: Do this right
         # Check if min amount is reached
         elif balance < (self.TRX_MIN * 100):
             warning = f"Balance of {balance / 100} TRX is smaller then min limit of {self.TRX_MIN} TRX. " \

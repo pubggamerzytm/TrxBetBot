@@ -7,7 +7,7 @@ from trx_utils import is_address
 from trxbetbot.plugin import TrxBetBotPlugin
 
 
-# TODO: Do i ever need to account for a fee?
+# TODO: Integrate fee!
 class Send(TrxBetBotPlugin):
 
     def __enter__(self):
