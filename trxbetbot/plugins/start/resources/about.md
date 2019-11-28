@@ -4,4 +4,4 @@ Welcome to TrxBetBot! A Tronix (TRX) wallet has been created for you. This is yo
 
 `{{address}}`
 
-Cheers 🍻👋
+{{warning}}Cheers 🍻👋

@@ -1,5 +1,8 @@
 import os
 
+# Default transaction fee
+TRX_FEE = 0.1
+
 # Project folders
 DIR_SRC = os.path.basename(os.path.dirname(__file__))
 DIR_RES = "resources"

@@ -1,16 +1,14 @@
-import time
 import logging
 import trxbetbot.emoji as emo
 import trxbetbot.utils as utl
+import trxbetbot.constants as con
 
 from tronapi import Tron
-from tronapi.main import Address
 from telegram import ParseMode
 from trxbetbot.plugin import TrxBetBotPlugin
-from trxbetbot.trongrid import Trongrid
 
 
-# TODO: Nachricht an zu tippenden user schicken
+# TODO: Test with sending with and without fee
 # TODO: Add examples to usage-files
 class Tip(TrxBetBotPlugin):
 
@@ -55,19 +53,28 @@ class Tip(TrxBetBotPlugin):
             update.message.reply_text(msg)
             return
 
+        to_user_id = res["data"][0][0]
         to_address = res["data"][0][5]
 
-        user_id = update.effective_user.id
+        from_user_id = update.effective_user.id
+        from_username = update.effective_user.username
+        from_firstname = update.effective_user.first_name
 
         sql = self.get_global_resource("select_address.sql")
-        # TODO: Could be that user has no wallet...
-        res = self.execute_global_sql(sql, user_id)
+        res = self.execute_global_sql(sql, from_user_id)
 
         if not res["success"]:
             # TODO: show error
             return
 
         data = res["data"]
+
+        if not data:
+            msg = f"{emo.ERROR} You don't have a wallet yet. " \
+                  f"Create one by talking to the bot @{bot.name}"
+            logging.info(f"{msg} - {update}")
+            update.message.reply_text(msg)
+            return
 
         trx_kwargs = dict()
         trx_kwargs["private_key"] = data[0][2]
@@ -85,16 +92,40 @@ class Tip(TrxBetBotPlugin):
             update.message.reply_text(msg)
             return
 
-        send = tron.trx.send(to_address, float(amount))
-        txid = send["transaction"]["txID"]
+        try:
+            send = tron.trx.send(to_address, float(amount))
+            txid = send["transaction"]["txID"]
 
-        explorer_link = f"https://tronscan.org/#/transaction/{txid}"
-        msg = f"{emo.DONE} [@{utl.esc_md(to_username)} was tipped with {amount} TRX]" \
-              f"({explorer_link})\n(Link will work after ~1 minute)"
+            explorer_link = f"https://tronscan.org/#/transaction/{txid}"
+            msg = f"{emo.DONE} @{utl.esc_md(from_username)} tipped @{utl.esc_md(to_username)} with " \
+                  f"`{amount}` TRX. View [Block Explorer]({explorer_link}) (wait ~1 minute)"
 
-        update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN, disable_web_page_preview=True)
+            update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN, disable_web_page_preview=True)
 
-        logging.info(f"{msg} - {update}")
+            backslash = "\n"
+            logging.info(f"{msg.replace(backslash, '')} - {update}")
 
-        sql = self.get_resource("insert_sent.sql")
-        self.execute_global_sql(sql, data[0][1], to_address, int(balance))
+            try:
+                if from_username:
+                    # Tipping user has a username
+                    bot.send_message(
+                        to_user_id,
+                        f"You received `{amount}` TRX from @{from_username}",
+                        parse_mode=ParseMode.MARKDOWN)
+                else:
+                    # Tipping user doesn't have a username
+                    bot.send_message(
+                        to_user_id,
+                        f"You received `{amount}` TRX from @{from_firstname}",
+                        parse_mode=ParseMode.MARKDOWN)
+            except:
+                logging.info(f"User {to_username} ({to_user_id}) couldn't be notified about tip")
+
+            sent_amount = tron.toSun(amount)
+            sql = self.get_resource("insert_tip.sql")
+            self.execute_global_sql(sql, from_user_id, to_user_id, sent_amount)
+        except Exception as e:
+            msg = f"{emo.ERROR} Couldn't send `{amount}` TRX. Try removing fee of {con.TRX_FEE} TRX"
+            update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
+            logging.error(e)
+            self.notify(e)

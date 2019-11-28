@@ -131,3 +131,4 @@ dmypy.json
 logs/
 data/
 backups/
+qr_codes/

@@ -5,7 +5,6 @@ from telegram import ParseMode
 from trxbetbot.plugin import TrxBetBotPlugin
 
 
-# TODO: Make username primary key, not user_id
 class Start(TrxBetBotPlugin):
 
     ABOUT_FILE = "about.md"
@@ -25,6 +24,19 @@ class Start(TrxBetBotPlugin):
 
         exists = self.get_resource("user_exists.sql")
         if self.execute_global_sql(exists, user.id)["data"][0][0] == 1:
+
+            # Update user details
+            updusr = self.get_resource("update_user.sql")
+            result = self.execute_global_sql(
+                updusr,
+                user.username,
+                user.first_name,
+                user.last_name,
+                user.language_code,
+                user.id)
+
+            logging.info(f"Updated User: {user} {result}")
+
             sql = self.get_global_resource("select_address.sql")
             res = self.execute_global_sql(sql, user.id)
 
@@ -64,5 +76,14 @@ class Start(TrxBetBotPlugin):
 
             logging.info(f"Insert User: {user} {result}")
 
-        about = self.get_resource(self.ABOUT_FILE).replace("{{address}}", address)
+        about = self.get_resource(self.ABOUT_FILE)
+        about = about.replace("{{address}}", address)
+
+        if user.username:
+            about = about.replace("{{warning}}", "")
+        else:
+            warning = f"*ATTENTION! You need a username to be able to receive tips. Set one in " \
+                      f"your Telegram profile and execute the /{self.get_handle()} command again*\n\n"
+            about = about.replace("{{warning}}", warning)
+
         update.message.reply_text(about, parse_mode=ParseMode.MARKDOWN)

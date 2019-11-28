@@ -1,6 +1,6 @@
 CREATE TABLE users (
 	user_id TEXT NOT NULL PRIMARY KEY,
-	username TEXT NOT NULL,
+	username TEXT,
 	first_name TEXT NOT NULL,
 	last_name TEXT,
 	language TEXT,
