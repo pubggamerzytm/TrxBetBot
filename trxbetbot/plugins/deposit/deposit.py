@@ -10,7 +10,6 @@ from trxbetbot.plugin import TrxBetBotPlugin
 from MyQR import myqr
 
 
-# TODO: Add logging and admin notification on error
 class Deposit(TrxBetBotPlugin):
 
     QRCODES_DIR = "qr_codes"
@@ -29,7 +28,8 @@ class Deposit(TrxBetBotPlugin):
         res = self.execute_global_sql(sql, user_id)
 
         if not res["success"]:
-            # TODO: show error
+            msg = f"Something went wrong. Please contact @Wikioshi the owner of this bot"
+            update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             return
 
         address = res["data"][0][1]

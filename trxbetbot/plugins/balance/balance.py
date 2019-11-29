@@ -1,5 +1,3 @@
-import logging
-
 from tronapi import Tron
 from telegram import ParseMode
 from trxbetbot.plugin import TrxBetBotPlugin
@@ -16,7 +14,8 @@ class Balance(TrxBetBotPlugin):
         res = self.execute_global_sql(sql, user_id)
 
         if not res["success"]:
-            # TODO: show error
+            msg = f"Something went wrong. Please contact @Wikioshi the owner of this bot"
+            update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             return
 
         data = res["data"]

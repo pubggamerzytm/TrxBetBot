@@ -41,7 +41,8 @@ class Start(TrxBetBotPlugin):
             res = self.execute_global_sql(sql, user.id)
 
             if not res["success"]:
-                # TODO: show error
+                msg = f"Something went wrong. Please contact @Wikioshi the owner of this bot"
+                update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
                 return
 
             address = res["data"][0][1]

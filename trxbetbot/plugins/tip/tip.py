@@ -8,7 +8,6 @@ from telegram import ParseMode
 from trxbetbot.plugin import TrxBetBotPlugin
 
 
-# TODO: Test with sending with and without fee
 # TODO: Add examples to usage-files
 class Tip(TrxBetBotPlugin):
 
@@ -44,7 +43,8 @@ class Tip(TrxBetBotPlugin):
         res = self.execute_global_sql(sql, to_username)
 
         if not res["success"]:
-            # TODO: show error
+            msg = f"Something went wrong. Please contact @Wikioshi the owner of this bot"
+            update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             return
 
         if not res["data"]:
@@ -64,7 +64,8 @@ class Tip(TrxBetBotPlugin):
         res = self.execute_global_sql(sql, from_user_id)
 
         if not res["success"]:
-            # TODO: show error
+            msg = f"Something went wrong. Please contact @Wikioshi the owner of this bot"
+            update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             return
 
         data = res["data"]

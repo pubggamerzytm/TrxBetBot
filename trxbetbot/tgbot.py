@@ -17,7 +17,6 @@ from telegram.ext import Updater, MessageHandler, Filters, CommandHandler
 from telegram.error import InvalidToken
 
 
-# TODO: Add periodic job that removes all msg ids from a list (msg = lost bets)
 class TelegramBot:
 
     plugins = list()

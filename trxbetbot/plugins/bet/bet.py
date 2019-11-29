@@ -9,8 +9,6 @@ from trxbetbot.plugin import TrxBetBotPlugin
 from trxbetbot.trongrid import Trongrid
 
 
-# TODO: Rework MIN and MAX
-# TODO: Add admin notifications for errors everywhere
 class Bet(TrxBetBotPlugin):
 
     TRX_MIN = 1
@@ -122,7 +120,6 @@ class Bet(TrxBetBotPlugin):
         """ Check if characters in 'chars' are all valid characters """
         return 0 not in [c in self.VALID_CHARS for c in chars]
 
-    # TODO: Add try catch and finally to avoid job being not removed
     def scan_balance(self, bot, job):
         tron = job.context["tron"]
         start = job.context["start"]
