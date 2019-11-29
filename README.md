@@ -1,5 +1,5 @@
-# Bauer Bot
-Bauer is a Telegram bot for [Bismuth](https://bismuth.cz) (BIS) cryptocurrency.
+# TrxBetBot
+TrxBetBot is a Telegram bot created by @endogen for @Wikioshi.
 
 ## Overview
 The bot is build around the [python-telegram-bot](https://github.com/python-telegram-bot/python-telegram-bot) module and is polling based. [Webhook mode](https://github.com/python-telegram-bot/python-telegram-bot/wiki/Webhooks) is implemented but untested.
