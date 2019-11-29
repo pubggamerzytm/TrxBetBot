@@ -1,5 +1,5 @@
-# Bauer Bot Plugins
-If you want to understand how to write a plugin for the Bauer Bot or if you want to know which plugins are available, then your in the right place.
+# TrxBetBot Plugins
+If you want to understand how to write a plugin for this bot or if you want to know which plugins are available, then you are in the right place.
 
 ## Creating a plugin
 Maybe the best way to show how to create a plugin is with an example.
@@ -9,31 +9,22 @@ Let's say you want to create a plugin named `example`. First thing you need is a
 
 ## List of plugins
 
-### Bismuth specific
-#### address
-Show your BIS wallet address
-
+### Wallet related
 #### balance
-Show balance of your BIS wallet
-
-#### board
-Show toplist for /rain and /tip
+Show balance of your TRX wallet
 
 #### deposit
-Show qr-code for your BIS wallet
-
-#### rain
-Distribute BIS coins to random users
+Show qr-code and address for your TRX wallet
 
 #### tip
-Tip BIS coins to users
-
-#### wallet
-Accept terms and create BIS wallet
+Tip users with TRX coins
 
 #### withdraw
-Withdraw BIS coins to a wallet
+Withdraw all your TRX coins to a wallet
 
-### Bot specific
+#### send
+Send a specific amount of TRX to a wallet
+
+### Bot related
 #### about
 Info about bot and creator
