@@ -152,38 +152,6 @@ class Bet(TrxBetBotPlugin):
         # Don't run repeating job again since we already found a balance
         job.schedule_removal()
 
-        bal = int(balance)
-        print(f"BALANCE SUN: {bal}")
-        max = int(tron.toSun(self.TRX_MAX))
-        print(f"MAX SUN: {max}")
-
-        # Check if MAX amount is reached
-        if bal > max:
-            to_much = bal
-            balance = tron.toSun(self.TRX_MAX)
-
-            # TODO: Change this to transfer funds back if to much
-            warning = f"{emo.ERROR} Balance of `{tron.fromSun(bal)}` TRX is bigger then max " \
-                      f"limit of `{self.TRX_MAX}` TRX. Betting amount will be reduced to " \
-                      f"`{self.TRX_MAX}` TRX and delta amount will be donated."
-
-            logging.info(warning)
-            update.message.reply_text(warning, parse_mode=ParseMode.MARKDOWN)
-
-        # Check if MIN amount is reached
-        min = int(tron.toSun(self.TRX_MIN))
-        print(f"MIN SUN: {min}")
-
-        if bal < min:
-
-            # TODO: Change this to transfer funds back if to low
-            warning = f"{emo.ERROR} Balance of `{tron.fromSun(bal)}` TRX is smaller then min " \
-                      f"limit of `{self.TRX_MIN}` TRX. Ending bet and donating delta amount."
-
-            logging.info(warning)
-            update.message.reply_text(warning, parse_mode=ParseMode.MARKDOWN)
-            return
-
         amount = tron.fromSun(balance)
         logging.info(f"Job {bet_addr58} - Balance: {amount} TRX")
 
@@ -201,6 +169,23 @@ class Bet(TrxBetBotPlugin):
 
         if not txid or not from_hex:
             msg = f"{emo.ERROR} Can't determine transaction ID or user wallet address"
+            update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
+            return
+
+        amo = float(amount)
+        max = self.TRX_MAX
+        min = self.TRX_MIN
+
+        if amo > max or amo < min:
+            msg = f"{emo.ERROR} Balance ({amo} TRX) is not inside min ({min} TRX) and max ({max} " \
+                  f"TRX) boundaries. Whole amount will be returned to the wallet it was sent from."
+
+            logging.info(msg)
+
+            # Send funds from betting address to original address
+            send = tron.trx.send(from_hex, amo)
+            logging.info(f"Job {bet_addr58} - Trx from Generated to Original: {send}")
+
             update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             return
 
