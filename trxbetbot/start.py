@@ -9,7 +9,6 @@ from trxbetbot.config import ConfigManager as Cfg
 from logging.handlers import TimedRotatingFileHandler
 
 
-# TODO: Don't show admin commands to users in 'help'
 # TODO: In case database will be removed on the fly, check if user / address is
 # available and if not, create them
 class TrxBetBot:
