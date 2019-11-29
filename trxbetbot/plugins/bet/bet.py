@@ -9,11 +9,11 @@ from trxbetbot.plugin import TrxBetBotPlugin
 from trxbetbot.trongrid import Trongrid
 
 
-# TODO: Test MIN and MAX
+# TODO: Rework MIN and MAX
 # TODO: Add admin notifications for errors everywhere
 class Bet(TrxBetBotPlugin):
 
-    TRX_MIN = 10
+    TRX_MIN = 1
     TRX_MAX = 10000
 
     # Betting
@@ -35,7 +35,7 @@ class Bet(TrxBetBotPlugin):
 
         if clean_losses:
             # Create background job that removes messages related to losses
-            self.repeat_job(self.remove_losses, clean_losses)
+            self.repeat_job(self.remove_losses, clean_losses, first=clean_losses)
 
         return self
 
@@ -149,28 +149,40 @@ class Bet(TrxBetBotPlugin):
             logging.info(f"Job {bet_addr58} - Balance: 0")
             return
 
-        # Check if max amount is reached
-        if balance > (self.TRX_MAX * 100):
-            to_much = balance
-            balance = (self.TRX_MAX * 100)
-
-            warning = f"Balance of {to_much / 100} TRX is bigger then max limit of {self.TRX_MAX} TRX. " \
-                      f"Reducing betting amount to {self.TRX_MAX} and donating delta amount."
-
-            logging.info(warning)
-            update.message.reply_text(warning)
-
-        # Check if min amount is reached
-        elif balance < (self.TRX_MIN * 100):
-            warning = f"Balance of {balance / 100} TRX is smaller then min limit of {self.TRX_MIN} TRX. " \
-                      f"Ending bet and donating delta amount."
-
-            logging.info(warning)
-            update.message.reply_text(warning)
-            return
-
         # Don't run repeating job again since we already found a balance
         job.schedule_removal()
+
+        bal = int(balance)
+        print(f"BALANCE SUN: {bal}")
+        max = int(tron.toSun(self.TRX_MAX))
+        print(f"MAX SUN: {max}")
+
+        # Check if MAX amount is reached
+        if bal > max:
+            to_much = bal
+            balance = tron.toSun(self.TRX_MAX)
+
+            # TODO: Change this to transfer funds back if to much
+            warning = f"{emo.ERROR} Balance of `{tron.fromSun(bal)}` TRX is bigger then max " \
+                      f"limit of `{self.TRX_MAX}` TRX. Betting amount will be reduced to " \
+                      f"`{self.TRX_MAX}` TRX and delta amount will be donated."
+
+            logging.info(warning)
+            update.message.reply_text(warning, parse_mode=ParseMode.MARKDOWN)
+
+        # Check if MIN amount is reached
+        min = int(tron.toSun(self.TRX_MIN))
+        print(f"MIN SUN: {min}")
+
+        if bal < min:
+
+            # TODO: Change this to transfer funds back if to low
+            warning = f"{emo.ERROR} Balance of `{tron.fromSun(bal)}` TRX is smaller then min " \
+                      f"limit of `{self.TRX_MIN}` TRX. Ending bet and donating delta amount."
+
+            logging.info(warning)
+            update.message.reply_text(warning, parse_mode=ParseMode.MARKDOWN)
+            return
 
         amount = tron.fromSun(balance)
         logging.info(f"Job {bet_addr58} - Balance: {amount} TRX")
