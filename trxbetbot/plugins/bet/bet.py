@@ -11,9 +11,6 @@ from trxbetbot.trongrid import Trongrid
 
 class Bet(TrxBetBotPlugin):
 
-    TRX_MIN = 1
-    TRX_MAX = 10000
-
     # Betting
     VALID_CHARS = "0123456789abcdef"
     LEVERAGE = {1: 15.2, 2: 7.6, 3: 5.06, 4: 3.8, 5: 3.04, 6: 2.53, 7: 2.17, 8: 1.9,
@@ -84,12 +81,15 @@ class Bet(TrxBetBotPlugin):
         chance = count / len(self.VALID_CHARS) * 100
         leverage = self.LEVERAGE[len(chars)]
 
+        min_trx = self.config.get("min_trx")
+        max_trx = self.config.get("max_trx")
+
         msg = self.get_resource("betting.md")
         msg = msg.replace("{{choice}}", choice)
         msg = msg.replace("{{count}}", str(count))
         msg = msg.replace("{{chance}}", str(chance))
-        msg = msg.replace("{{min}}", str(self.TRX_MIN))
-        msg = msg.replace("{{max}}", str(self.TRX_MAX))
+        msg = msg.replace("{{min}}", str(min_trx))
+        msg = msg.replace("{{max}}", str(max_trx))
         msg = msg.replace("{{leverage}}", str(leverage))
         logging.info(msg.replace("\n", ""))
 
@@ -170,8 +170,8 @@ class Bet(TrxBetBotPlugin):
             return
 
         amo = float(amount)
-        max = self.TRX_MAX
-        min = self.TRX_MIN
+        min = self.config.get("min_trx")
+        max = self.config.get("max_trx")
 
         if amo > max or amo < min:
             msg = f"{emo.ERROR} Balance ({amo} TRX) is not inside min ({min} TRX) and max ({max} " \
