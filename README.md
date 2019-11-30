@@ -126,23 +126,13 @@ which will kill __every__ Python 3.7 process that is currently running.
 If you want to show a list of available commands as you type, open a chat with Telegram bot [@BotFather](https://t.me/BotFather) and execute the command `/setcommands`. Then choose the bot you want to activate the list for and after that send the list of commands with description. Something like this:
 
 ```
-about - Info about bot and its creator
-address - Shows your wallet address
-admin - Manage and controle the bot
-backup - Backup whole bot or a plugin
-balance - Shows your wallet balance
-deposit - Shows qr-code for your address
-feedback - <your feedback>
-help - Show overview of available commands
-logfile - Download current logfile
-price - Show price on exchanges in BTC
-rain - <total amount> <number of users>
-restart - Restart the bot
-shutdown - Shutdown the bot
-tip - @<username> <amount>
-board - tip | rain
-accept - Accept terms and create wallet
-withdraw - <address> <amount>
+balance - Show balance of your TRX wallet
+bet - Bet TRX on last char of block hash
+deposit - Deposit TRX to your bot wallet
+feedback - Send us your feedback
+send - Send TRX from your bot wallet
+tip - Tip another Telegram user with TRX
+withdraw - Withdraw all TRX from your wallet
 ```
 
 ## Development

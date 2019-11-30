@@ -1,5 +1,5 @@
 {
     "handle": "balance",
     "category": "Wallet",
-    "description": "Show balance of your bot wallet"
+    "description": "Show balance of your TRX wallet"
 }
