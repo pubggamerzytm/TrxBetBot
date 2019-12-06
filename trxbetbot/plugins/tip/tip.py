@@ -8,6 +8,7 @@ from telegram import ParseMode
 from trxbetbot.plugin import TrxBetBotPlugin
 
 
+# TODO: Add possibility to immediately create a wallet if user doesn't have one (the receiver)
 # TODO: Add examples to usage-files
 class Tip(TrxBetBotPlugin):
 
@@ -88,7 +89,7 @@ class Tip(TrxBetBotPlugin):
 
         # Check if address has enough balance
         if float(amount) > float(available_amount):
-            msg = f"{emo.ERROR} Not enough funds. You balance is {available_amount} TRX"
+            msg = f"{emo.ERROR} Not enough funds. Your balance is {available_amount} TRX"
             logging.info(f"{msg} - {data[0][1]} - {update}")
             update.message.reply_text(msg)
             return
