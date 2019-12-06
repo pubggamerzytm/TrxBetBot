@@ -72,6 +72,10 @@ class TelegramBot:
         # Handle all Telegram related errors
         self.dispatcher.add_error_handler(self._handle_tg_errors)
 
+        # Send message to admin
+        for admin in config.get("admin", "ids"):
+            self.updater.bot.send_message(admin, "Bot is up and running!")
+
     def bot_start_polling(self):
         """ Start the bot in polling mode """
         self.updater.start_polling(clean=True)
