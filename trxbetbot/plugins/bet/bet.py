@@ -9,6 +9,7 @@ from trxbetbot.plugin import TrxBetBotPlugin
 from trxbetbot.trongrid import Trongrid
 
 
+# TODO: Handle 'tronapi.exceptions.TronError: Cannot transfer TRX to the same account'
 class Bet(TrxBetBotPlugin):
 
     # Betting
@@ -262,8 +263,10 @@ class Bet(TrxBetBotPlugin):
             parse_mode=ParseMode.MARKDOWN,
             disable_web_page_preview=True)
 
-        msg_list = self.config.get("loss_messages")
-        msg_list.append({"chat_id": message.chat_id, "msg_id": message.message_id})
-        self.config.set(msg_list, "loss_messages")
+        if not bet_won:
+            # Save messages about lost bets so that they can be removed later
+            msg_list = self.config.get("loss_messages")
+            msg_list.append({"chat_id": message.chat_id, "msg_id": message.message_id})
+            self.config.set(msg_list, "loss_messages")
 
         logging.info(f"Job {bet_addr58} - Ending job")
