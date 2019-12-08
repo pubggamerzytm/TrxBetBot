@@ -13,9 +13,9 @@ The bot is build around the [python-telegram-bot](https://github.com/python-tele
 * Bot can be administered by more then one user
 
 ## Configuration
-This part is only relevant if you want to host this bot yourself. If you just want to use the bot, [add the bot](https://t.me/bis_bauer_bot) *@bis_bauer_bot* to your Telegram contacts.
+This part is only relevant if you want to host this bot yourself. If you just want to use the bot, [add the bot](https://t.me/HashLottoBot) *@HashLottoBot* to your Telegram contacts.
 
-Before starting up the bot you have to take care of some settings and add a Telegram API token. The configuration file and toke file are located in the `config` folder.
+Before starting up the bot you have to take care of some settings and add a Telegram API token. The configuration file toke file and wallet file are located in the `config` folder.
 
 ### config.json
 This file holds the configuration for the bot. You have to at least edit the value for __admin_id__. Everything else is optional.
@@ -37,6 +37,9 @@ This file holds the Telegram bot token. You have to provide one and you will get
 If you don't want to provide the token in a file then you have two other options:
 - Provide it as a command line argument: `-tkn <your token>`
 - Provide it as an input on the command line (**MOST SECURE**): `--input-tkn`
+
+### wallet.json
+This file holds the private key of the TRX wallet that belongs to the bot and from which the winnings will be send to users.
 
 ## Starting
 In order to run the bot you need to execute it with the Python interpreter. If you don't have any idea where to host the bot, take a look at [Where to host Telegram Bots](https://github.com/python-telegram-bot/python-telegram-bot/wiki/Where-to-host-Telegram-Bots). Services like [Heroku](https://www.heroku.com) (free) will work fine. You can also run the script locally on your own computer for testing purposes.
@@ -98,36 +101,37 @@ which will kill __every__ Python 3.7 process that is currently running.
 ## Usage
 
 ### Available commands
-##### Bismuth
-```
-/accept - Accept terms and create BIS wallet
-/address - Show your BIS wallet address
-/balance - Show balance of your BIS wallet
-/board - Show toplist for /rain and /tip
-/deposit - Show qr-code for your BIS wallet
-/giveaway - Give away BIS to random user
-/rain - Randomly distribute BIS coins
-/tip - Tip BIS coins to users
-/withdraw - Withdraw BIS coins to a wallet
-```
-
 ##### Bot
 ```
-/about - Info about bot and creator
-/admin - Control and maintain the bot
-/backup - Backup whole bot folder
+/tutorial - Learn how to use this bot
 /feedback - Send us your feedback
+/backup - Backup whole bot folder
 /help - Show all available commands
 /log - Download current logfile
 /restart - Restart the bot
 /shutdown - Shutdown the bot
 ```
 
+##### Gambling
+```
+/bet - Bet TRX on last char of block hash
+```
+
+##### Wallet
+```
+/balance - Show balance of your TRX wallet
+/deposit - Deposit TRX to your bot wallet
+/send - Send TRX from your bot wallet
+/tip - Tip another Telegram user with TRX
+/withdraw - Withdraw all TRX from your bot wallet
+```
+
 If you want to show a list of available commands as you type, open a chat with Telegram bot [@BotFather](https://t.me/BotFather) and execute the command `/setcommands`. Then choose the bot you want to activate the list for and after that send the list of commands with description. Something like this:
 
 ```
+tutorial - Learn how to use this bot
 balance - Show balance of your TRX wallet
-bet - Bet TRX on last char of block hash
+bet - Bet TRX on last character of block hash
 deposit - Deposit TRX to your bot wallet
 feedback - Send us your feedback
 send - Send TRX from your bot wallet
@@ -135,11 +139,5 @@ tip - Tip another Telegram user with TRX
 withdraw - Withdraw all TRX from your wallet
 ```
 
-## Development
-I am actively developing this bot and will do so also in the near future. If you would like to help out with development, send a message via Telegram to [@endogen](https://t.me/endogen). If you experience any issues open an issue here at GitHub.
-
 ### Plugins
 If you decide to write your own plugin, check out the [Plugin Page](https://github.com/Endogen/Telegram-Bauer-Bot/tree/master/bauer/plugins) to read up on how to create a plugin and know about available plugins.
-
-## Disclaimer
-I use this bot personally and it should work fine but if not, I will NOT take any responsibility! Do NOT deposit huge amounts of coins into your bot wallet and be aware that the administrators that host the bot have access to the private key of any wallet that has been created with the bot.
