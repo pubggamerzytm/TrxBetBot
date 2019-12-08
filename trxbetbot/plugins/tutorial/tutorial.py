@@ -2,7 +2,7 @@ from telegram import ParseMode
 from trxbetbot.plugin import TrxBetBotPlugin
 
 
-class About(TrxBetBotPlugin):
+class Tutorial(TrxBetBotPlugin):
 
     INFO_FILE = "info.md"
 
