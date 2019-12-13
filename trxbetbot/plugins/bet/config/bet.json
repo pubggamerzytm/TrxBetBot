@@ -5,7 +5,7 @@
     "min_trx": 1,
     "max_trx": 2000,
     "check_start": 60,
-    "balance_check": 20,
+    "balance_check": 30,
     "stop_check": 1800,
     "clean_losses": 3600,
     "loss_messages": []
