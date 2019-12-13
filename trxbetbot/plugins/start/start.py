@@ -5,6 +5,8 @@ from telegram import ParseMode
 from trxbetbot.plugin import TrxBetBotPlugin
 
 
+# FIXME: Do not save address in 'users' an 'addresses' DB
+# only save it in addresses and foreign key is user_id or username
 class Start(TrxBetBotPlugin):
 
     ABOUT_FILE = "about.md"
