@@ -168,8 +168,8 @@ class Bet(TrxBetBotPlugin):
         try:
             balance = tron.trx.get_balance()
         except Exception as e:
-            # TODO
-            pass
+            logging.error(f"Can't retrieve balance for {bet_addr58}: {e}")
+            return
 
         # Check if balance is still 0. If yes, rerun job in specified interval
         if balance == 0:
@@ -182,8 +182,12 @@ class Bet(TrxBetBotPlugin):
         amount = tron.fromSun(balance)
         logging.info(f"Job {bet_addr58} - Balance: {amount} TRX")
 
-        transactions = self.tron_grid.get_trx_info_by_account(bet_addr.hex, only_to=True)
-        logging.info(f"Job {bet_addr58} - Transactions: {transactions}")
+        try:
+            transactions = self.tron_grid.get_trx_info_by_account(bet_addr.hex, only_to=True)
+            logging.info(f"Job {bet_addr58} - Transactions: {transactions}")
+        except Exception as e:
+            logging.error(f"Can't retrieve transaction for {bet_addr58}: {e}")
+            return
 
         txid = from_hex = from_base58 = None
         for trx in transactions["data"]:
@@ -210,8 +214,12 @@ class Bet(TrxBetBotPlugin):
             logging.info(msg)
 
             # Send funds from betting address to original address
-            send = tron.trx.send(from_hex, amo)
-            logging.info(f"Job {bet_addr58} - Trx from Generated to Original: {send}")
+            try:
+                send = tron.trx.send(from_hex, amo)
+                logging.info(f"Job {bet_addr58} - Trx from Generated to Original: {send}")
+            except Exception as e:
+                logging.error(f"Can't send for {bet_addr58}: {e}")
+                return
 
             update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             return
@@ -219,16 +227,16 @@ class Bet(TrxBetBotPlugin):
         try:
             info = tron.trx.get_transaction_info(txid)
         except Exception as e:
-            # TODO
-            pass
+            logging.error(f"Can't retrieve transaction info for {bet_addr58}: {e}")
+            return
 
         block_nr = info["blockNumber"]
 
         try:
             block = tron.trx.get_block(block_nr)
         except Exception as e:
-            # TODO
-            pass
+            logging.error(f"Can't retrieve block info for {bet_addr58}: {e}")
+            return
 
         block_hash = block["blockID"]
         last_char = block_hash[-1:]
@@ -266,11 +274,10 @@ class Bet(TrxBetBotPlugin):
             # Send funds from bot address to user address
             try:
                 send_user = self.get_tron().trx.send(from_hex, float(winnings_trx))
+                logging.info(f"Job {bet_addr58} - Trx from Bot to User: {send_user}")
             except Exception as e:
-                # TODO
-                pass
-
-            logging.info(f"Job {bet_addr58} - Trx from Bot to User: {send_user}")
+                logging.error(f"Can't send for {bet_addr58}: {e}")
+                return
 
             win_trx_id = send_user["transaction"]["txID"]
 
@@ -287,11 +294,10 @@ class Bet(TrxBetBotPlugin):
         # Send funds from betting address to bot address
         try:
             send_bot = tron.trx.send(bot_addr, float(amount))
+            logging.info(f"Job {bet_addr58} - Trx from Generated to Bot: {send_bot}")
         except Exception as e:
-            # TODO
-            pass
-
-        logging.info(f"Job {bet_addr58} - Trx from Generated to Bot: {send_bot}")
+            logging.error(f"Can't send for {bet_addr58}: {e}")
+            return
 
         # Save betting results to database
         sql = self.get_resource("update_bet.sql")
