@@ -94,8 +94,8 @@ class Bet(TrxBetBotPlugin):
         msg = msg.replace("{{leverage}}", str(leverage))
         logging.info(msg.replace("\n", ""))
 
-        update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
-        update.message.reply_text(f"`{account.address.base58}`", parse_mode=ParseMode.MARKDOWN)
+        msg1 = update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
+        msg2 = update.message.reply_text(f"`{account.address.base58}`", parse_mode=ParseMode.MARKDOWN)
 
         # Save bet details to database
         sql = self.get_resource("insert_bet.sql")
@@ -103,7 +103,16 @@ class Bet(TrxBetBotPlugin):
 
         first = self.config.get("check_start")
         check = self.config.get("balance_check")
-        context = {"tron": tron, "choice": choice, "update": update, "start": time.time()}
+
+        context = {
+            "tron": tron,
+            "choice": choice,
+            "update": update,
+            "start": time.time(),
+            "msg1": msg1,
+            "msg2": msg2
+        }
+
         self.repeat_job(self.scan_balance, check, first=first, context=context)
 
         logging.info(f"Initiated repeating job for {account.address.base58}")
@@ -130,6 +139,9 @@ class Bet(TrxBetBotPlugin):
         bet_addr = tron.default_address
         bet_addr58 = bet_addr["base58"]
 
+        msg1 = job.context["msg1"]
+        msg2 = job.context["msg2"]
+
         # Retrieve time in seconds to scan the balance
         time_frame = int(self.config.get("stop_check"))
 
@@ -137,10 +149,27 @@ class Bet(TrxBetBotPlugin):
         if (start + time_frame) < time.time():
             logging.info(f"Job {bet_addr58} - Ending job because {time_frame} seconds are over")
             job.schedule_removal()
+
+            # Remove messages after betting address isn't valid anymore
+
+            chat_id1 = msg1.chat_id
+            msg_id1 = msg1.message_id
+            bot.delete_message(chat_id=chat_id1, message_id=msg_id1)
+            logging.info(f"Removed betting message 1 for {bet_addr58}")
+
+            chat_id2 = msg2.chat_id
+            msg_id2 = msg2.message_id
+            bot.delete_message(chat_id=chat_id2, message_id=msg_id2)
+            logging.info(f"Removed betting message 2 for {bet_addr58}")
+
             return
 
         # Get balance (in "Sun") of generated address
-        balance = tron.trx.get_balance()
+        try:
+            balance = tron.trx.get_balance()
+        except Exception as e:
+            # TODO
+            pass
 
         # Check if balance is still 0. If yes, rerun job in specified interval
         if balance == 0:
@@ -187,9 +216,20 @@ class Bet(TrxBetBotPlugin):
             update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             return
 
-        info = tron.trx.get_transaction_info(txid)
+        try:
+            info = tron.trx.get_transaction_info(txid)
+        except Exception as e:
+            # TODO
+            pass
+
         block_nr = info["blockNumber"]
-        block = tron.trx.get_block(block_nr)
+
+        try:
+            block = tron.trx.get_block(block_nr)
+        except Exception as e:
+            # TODO
+            pass
+
         block_hash = block["blockID"]
         last_char = block_hash[-1:]
 
@@ -224,7 +264,12 @@ class Bet(TrxBetBotPlugin):
             logging.info(f"Job {bet_addr58} - MSG: {log_msg}")
 
             # Send funds from bot address to user address
-            send_user = self.get_tron().trx.send(from_hex, float(winnings_trx))
+            try:
+                send_user = self.get_tron().trx.send(from_hex, float(winnings_trx))
+            except Exception as e:
+                # TODO
+                pass
+
             logging.info(f"Job {bet_addr58} - Trx from Bot to User: {send_user}")
 
             win_trx_id = send_user["transaction"]["txID"]
@@ -240,7 +285,12 @@ class Bet(TrxBetBotPlugin):
             logging.info(f"Job {bet_addr58} - MSG: {log_msg}")
 
         # Send funds from betting address to bot address
-        send_bot = tron.trx.send(bot_addr, float(amount))
+        try:
+            send_bot = tron.trx.send(bot_addr, float(amount))
+        except Exception as e:
+            # TODO
+            pass
+
         logging.info(f"Job {bet_addr58} - Trx from Generated to Bot: {send_bot}")
 
         # Save betting results to database
