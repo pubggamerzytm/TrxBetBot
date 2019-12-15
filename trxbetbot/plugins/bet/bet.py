@@ -9,7 +9,6 @@ from trxbetbot.plugin import TrxBetBotPlugin
 from trxbetbot.trongrid import Trongrid
 
 
-# TODO: Handle 'tronapi.exceptions.TronError: Cannot transfer TRX to the same account'
 class Bet(TrxBetBotPlugin):
 
     # Betting
@@ -122,8 +121,8 @@ class Bet(TrxBetBotPlugin):
             try:
                 bot.delete_message(chat_id=msg['chat_id'], message_id=msg['msg_id'])
                 logging.info(f"Loss message removed: {msg}")
-            except:
-                pass
+            except Exception as e:
+                logging.warning(f"Cant delete message: {e}")
         self.config.set(list(), "loss_messages")
 
     def contains_all(self, chars):
@@ -151,17 +150,7 @@ class Bet(TrxBetBotPlugin):
             job.schedule_removal()
 
             # Remove messages after betting address isn't valid anymore
-
-            chat_id1 = msg1.chat_id
-            msg_id1 = msg1.message_id
-            bot.delete_message(chat_id=chat_id1, message_id=msg_id1)
-            logging.info(f"Removed betting message 1 for {bet_addr58}")
-
-            chat_id2 = msg2.chat_id
-            msg_id2 = msg2.message_id
-            bot.delete_message(chat_id=chat_id2, message_id=msg_id2)
-            logging.info(f"Removed betting message 2 for {bet_addr58}")
-
+            self.remove_messages(bot, msg1, msg2, bet_addr58)
             return
 
         # Get balance (in "Sun") of generated address
@@ -169,6 +158,7 @@ class Bet(TrxBetBotPlugin):
             balance = tron.trx.get_balance()
         except Exception as e:
             logging.error(f"Can't retrieve balance for {bet_addr58}: {e}")
+            self.notify(e)
             return
 
         # Check if balance is still 0. If yes, rerun job in specified interval
@@ -187,6 +177,7 @@ class Bet(TrxBetBotPlugin):
             logging.info(f"Job {bet_addr58} - Transactions: {transactions}")
         except Exception as e:
             logging.error(f"Can't retrieve transaction for {bet_addr58}: {e}")
+            self.notify(e)
             return
 
         txid = from_hex = from_base58 = None
@@ -199,8 +190,10 @@ class Bet(TrxBetBotPlugin):
                 from_base58 = (Address().from_hex(from_hex)).decode("utf-8")
 
         if not txid or not from_hex:
-            msg = f"{emo.ERROR} Can't determine transaction ID or user wallet address"
+            msg = f"{emo.ERROR} Can't determine transaction ID or user wallet address: {bet_addr58}"
             update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
+            logging.error(msg)
+            self.notify(msg)
             return
 
         amo = float(amount)
@@ -219,6 +212,7 @@ class Bet(TrxBetBotPlugin):
                 logging.info(f"Job {bet_addr58} - Trx from Generated to Original: {send}")
             except Exception as e:
                 logging.error(f"Can't send for {bet_addr58}: {e}")
+                self.notify(e)
                 return
 
             update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
@@ -228,6 +222,7 @@ class Bet(TrxBetBotPlugin):
             info = tron.trx.get_transaction_info(txid)
         except Exception as e:
             logging.error(f"Can't retrieve transaction info for {bet_addr58}: {e}")
+            self.notify(e)
             return
 
         block_nr = info["blockNumber"]
@@ -236,6 +231,7 @@ class Bet(TrxBetBotPlugin):
             block = tron.trx.get_block(block_nr)
         except Exception as e:
             logging.error(f"Can't retrieve block info for {bet_addr58}: {e}")
+            self.notify(e)
             return
 
         block_hash = block["blockID"]
@@ -277,6 +273,7 @@ class Bet(TrxBetBotPlugin):
                 logging.info(f"Job {bet_addr58} - Trx from Bot to User: {send_user}")
             except Exception as e:
                 logging.error(f"Can't send for {bet_addr58}: {e}")
+                self.notify(e)
                 return
 
             win_trx_id = send_user["transaction"]["txID"]
@@ -297,6 +294,7 @@ class Bet(TrxBetBotPlugin):
             logging.info(f"Job {bet_addr58} - Trx from Generated to Bot: {send_bot}")
         except Exception as e:
             logging.error(f"Can't send for {bet_addr58}: {e}")
+            self.notify(e)
             return
 
         # Save betting results to database
@@ -326,3 +324,17 @@ class Bet(TrxBetBotPlugin):
             self.config.set(msg_list, "loss_messages")
 
         logging.info(f"Job {bet_addr58} - Ending job")
+
+        # Remove messages after betting address isn't valid anymore
+        self.remove_messages(bot, msg1, msg2, bet_addr58)
+
+    def remove_messages(self, bot, msg1, msg2, bet_addr58):
+        chat_id1 = msg1.chat_id
+        msg_id1 = msg1.message_id
+        bot.delete_message(chat_id=chat_id1, message_id=msg_id1)
+        logging.info(f"Removed betting message 1 for {bet_addr58}")
+
+        chat_id2 = msg2.chat_id
+        msg_id2 = msg2.message_id
+        bot.delete_message(chat_id=chat_id2, message_id=msg_id2)
+        logging.info(f"Removed betting message 2 for {bet_addr58}")
