@@ -14,7 +14,7 @@ from zipfile import ZipFile
 from trxbetbot.config import ConfigManager
 from telegram import ParseMode, Chat
 from telegram.ext import Updater, MessageHandler, Filters, CommandHandler
-from telegram.error import InvalidToken
+from telegram.error import InvalidToken, Unauthorized
 
 
 class TelegramBot:
@@ -37,8 +37,15 @@ class TelegramBot:
         try:
             self.updater = Updater(token, request_kwargs=tgb_kwargs)
         except InvalidToken as e:
-            logging.error(e)
-            exit("ERROR: Bot token not valid")
+            logging.error(f"ERROR: Bot token not valid: {e}")
+            exit()
+
+        try:
+            # Check if Telegram token is really valid
+            self.updater.bot.get_me()
+        except Unauthorized as e:
+            logging.error(f"ERROR: Bot token not valid: {e}")
+            exit()
 
         self.job_queue = self.updater.job_queue
         self.dispatcher = self.updater.dispatcher
@@ -74,7 +81,10 @@ class TelegramBot:
 
         # Send message to admin
         for admin in config.get("admin", "ids"):
-            self.updater.bot.send_message(admin, "Bot is up and running!")
+            try:
+                self.updater.bot.send_message(admin, "Bot is up and running!")
+            except Exception as e:
+                logging.error(e)
 
     def bot_start_polling(self):
         """ Start the bot in polling mode """
