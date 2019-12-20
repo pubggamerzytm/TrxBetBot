@@ -77,7 +77,7 @@ class Send(TrxBetBotPlugin):
             send = tron.trx.send(address, float(amount))
 
             if "transaction" not in send:
-                logging.error(send)
+                logging.error(send)  # TODO: Add more context info
                 raise Exception("key 'transaction' not in send result")
 
             txid = send["transaction"]["txID"]
