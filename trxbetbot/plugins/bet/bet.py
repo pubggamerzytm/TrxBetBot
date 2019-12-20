@@ -154,8 +154,8 @@ class Bet(TrxBetBotPlugin):
             self.remove_messages(bot, msg1, msg2, bet_addr58)
             return
 
-        # Get balance (in "Sun") of generated address
         try:
+            # Get balance (in "Sun") of generated address
             balance = tron.trx.get_balance()
         except Exception as e:
             logging.error(f"Can't retrieve balance for {bet_addr58}: {e}")
@@ -211,8 +211,8 @@ class Bet(TrxBetBotPlugin):
 
             logging.info(msg)
 
-            # Send funds from betting address to original address
             try:
+                # Send funds from betting address to original address
                 send = tron.trx.send(from_hex, amo)
                 logging.info(f"Job {bet_addr58} - Trx from Generated to Original: {send}")
             except Exception as e:
@@ -246,8 +246,7 @@ class Bet(TrxBetBotPlugin):
                      f"TXID: {trx_id} - "
                      f"Sender: {from_base58} - "
                      f"Block: {block} - "
-                     f"Block Hash: {block_hash} - "
-                     f"")
+                     f"Block Hash: {block_hash} - ")
 
         bot_addr = self.get_tron().default_address.hex
         bet_won = last_char in choice
@@ -256,7 +255,7 @@ class Bet(TrxBetBotPlugin):
 
         block_link = f"[Block Explorer](https://tronscan.org/#/block/{block_nr})"
 
-        # USER WON ---------------
+        # --------------- USER WON ---------------
         if bet_won:
             leverage = self.LEVERAGE[len(choice)]
             winnings_sun = int(trx_balance * leverage)
@@ -282,7 +281,7 @@ class Bet(TrxBetBotPlugin):
 
             win_trx_id = send_user["transaction"]["txID"]
 
-        # BOT WON ---------------
+        # --------------- BOT WON ---------------
         else:
             msg = self.get_resource("lost.md")
             msg = msg.replace("{{explorer}}", block_link)
@@ -344,4 +343,4 @@ class Bet(TrxBetBotPlugin):
             bot.delete_message(chat_id=chat_id2, message_id=msg_id2)
             logging.info(f"Removed betting message 2 for {bet_addr58}")
         except Exception as e:
-            logging.warning(f"Couldn't remove message for {bet_addr58}")
+            logging.warning(f"Couldn't remove message for {bet_addr58}: {e}")
