@@ -77,8 +77,8 @@ class Send(TrxBetBotPlugin):
             send = tron.trx.send(address, float(amount))
 
             if "transaction" not in send:
-                logging.error(send)
-                raise Exception("key 'transaction' not in send result")
+                logging.error(f"Key 'transaction' not in send result to {address}: {send}")
+                raise Exception(send["message"])
 
             txid = send["transaction"]["txID"]
 
@@ -93,11 +93,8 @@ class Send(TrxBetBotPlugin):
             sql = self.get_resource("insert_sent.sql")
             self.execute_global_sql(sql, data[0][1], address, int(balance))
         except Exception as e:
-            logging.error(e)
-
-            if str(e) == "key 'transaction' not in send result":
+            if "balance is not sufficient" in str(e):
                 msg = f"{emo.ERROR} Balance not sufficient. Try removing fee of `{con.TRX_FEE}` TRX"
                 update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             else:
                 update.message.reply_text(f"{emo.ERROR} {repr(e)}")
-                self.notify(e)
