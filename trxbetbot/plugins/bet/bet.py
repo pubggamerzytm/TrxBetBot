@@ -1,4 +1,6 @@
+import  os
 import time
+import random
 import logging
 import trxbetbot.emoji as emo
 
@@ -15,6 +17,9 @@ class Bet(TrxBetBotPlugin):
     VALID_CHARS = "0123456789abcdef"
     LEVERAGE = {1: 15.2, 2: 7.6, 3: 5.06, 4: 3.8, 5: 3.04, 6: 2.53, 7: 2.17, 8: 1.9,
                 9: 1.68, 10: 1.52, 11: 1.38, 12: 1.26, 13: 1.16, 14: 1.08, 15: 1.01}
+
+    WON_DIR = "won"
+    LOST_DIR = "lost"
 
     tron_grid = Trongrid()
 
@@ -158,7 +163,7 @@ class Bet(TrxBetBotPlugin):
             # Get balance (in "Sun") of generated address
             balance = tron.trx.get_balance()
         except Exception as e:
-            logging.error(f"Can't retrieve balance for {bet_addr58}: {e}")
+            logging.error(f"Job {bet_addr58} - Can't retrieve balance: {e}")
             self.notify(e)
             return
 
@@ -174,7 +179,7 @@ class Bet(TrxBetBotPlugin):
             transactions = self.tron_grid.get_trx_info_by_account(bet_addr.hex, only_to=True)
             logging.info(f"Job {bet_addr58} - Transactions: {transactions}")
         except Exception as e:
-            logging.error(f"Can't retrieve transaction for {bet_addr58}: {e}")
+            logging.error(f"Job {bet_addr58} - Can't retrieve transaction: {e}")
             self.notify(e)
             return
 
@@ -216,7 +221,7 @@ class Bet(TrxBetBotPlugin):
                 send = tron.trx.send(from_hex, amo)
                 logging.info(f"Job {bet_addr58} - Trx from Generated to Original: {send}")
             except Exception as e:
-                logging.error(f"Can't send for {bet_addr58}: {e}")
+                logging.error(f"Job {bet_addr58} - Can't send: {e}")
                 self.notify(e)
                 return
 
@@ -226,7 +231,7 @@ class Bet(TrxBetBotPlugin):
         try:
             info = tron.trx.get_transaction_info(trx_id)
         except Exception as e:
-            logging.error(f"Can't retrieve transaction info for {bet_addr58}: {e}")
+            logging.error(f"Job {bet_addr58} - Can't retrieve transaction info: {e}")
             self.notify(e)
             return
 
@@ -235,7 +240,7 @@ class Bet(TrxBetBotPlugin):
         try:
             block = tron.trx.get_block(block_nr)
         except Exception as e:
-            logging.error(f"Can't retrieve block info for {bet_addr58}: {e}")
+            logging.error(f"Job {bet_addr58} - Can't retrieve block info: {e}")
             self.notify(e)
             return
 
@@ -275,11 +280,14 @@ class Bet(TrxBetBotPlugin):
                 send_user = self.get_tron().trx.send(from_hex, float(winnings_trx))
                 logging.info(f"Job {bet_addr58} - Trx from Bot to User: {send_user}")
             except Exception as e:
-                logging.error(f"Can't send for {bet_addr58}: {e}")
+                logging.error(f"Job {bet_addr58} - Can't send: {e}")
                 self.notify(e)
                 return
 
             win_trx_id = send_user["transaction"]["txID"]
+
+            # Determine winning animation path
+            image_path = os.path.join(self.get_res_path(), self.WON_DIR)
 
         # --------------- BOT WON ---------------
         else:
@@ -291,12 +299,17 @@ class Bet(TrxBetBotPlugin):
             log_msg = msg.replace("\n", "")
             logging.info(f"Job {bet_addr58} - MSG: {log_msg}")
 
+            # Determine loosing animation path
+            image_path = os.path.join(self.get_res_path(), self.LOST_DIR)
+
+        # --------------- General ---------------
+
         try:
             # Send funds from betting address to bot address
             send_bot = tron.trx.send(bot_addr, amo)
             logging.info(f"Job {bet_addr58} - Trx from Generated to Bot: {send_bot}")
         except Exception as e:
-            logging.error(f"Can't send for {bet_addr58}: {e}")
+            logging.error(f"Job {bet_addr58} - Can't send: {e}")
             self.notify(e)
             return
 
@@ -314,11 +327,17 @@ class Bet(TrxBetBotPlugin):
             win_trx_id,
             bet_addr58)
 
+        image_choice = random.choice(os.listdir(image_path))
+        image_final = os.path.join(image_path, image_choice)
+
         # Let user know about outcome
-        message = update.message.reply_text(
-            msg,
+        message = bot.send_photo(
+            chat_id=update.message.chat_id,
+            photo=image_final,
+            caption=msg,
             parse_mode=ParseMode.MARKDOWN,
-            disable_web_page_preview=True)
+            disable_web_page_preview=True
+        )
 
         if not bet_won:
             # Save messages about lost bets so that they can be removed later
@@ -336,11 +355,11 @@ class Bet(TrxBetBotPlugin):
             chat_id1 = msg1.chat_id
             msg_id1 = msg1.message_id
             bot.delete_message(chat_id=chat_id1, message_id=msg_id1)
-            logging.info(f"Removed betting message 1 for {bet_addr58}")
+            logging.info(f"Job {bet_addr58} - Removed betting message 1")
 
             chat_id2 = msg2.chat_id
             msg_id2 = msg2.message_id
             bot.delete_message(chat_id=chat_id2, message_id=msg_id2)
-            logging.info(f"Removed betting message 2 for {bet_addr58}")
+            logging.info(f"Job {bet_addr58} - Removed betting message 2")
         except Exception as e:
-            logging.warning(f"Couldn't remove message for {bet_addr58}: {e}")
+            logging.warning(f"Job {bet_addr58} - Couldn't remove message: {e}")
