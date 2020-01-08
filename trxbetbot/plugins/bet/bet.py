@@ -235,6 +235,9 @@ class Bet(TrxBetBotPlugin):
             self.notify(e)
             return
 
+        if "blockNumber" not in info:
+            return
+
         block_nr = info["blockNumber"]
 
         try:
@@ -327,17 +330,18 @@ class Bet(TrxBetBotPlugin):
             win_trx_id,
             bet_addr58)
 
+        # Randomly determine image to show to user
         image_choice = random.choice(os.listdir(image_path))
         image_final = os.path.join(image_path, image_choice)
 
         # Let user know about outcome
-        message = bot.send_photo(
-            chat_id=update.message.chat_id,
-            photo=image_final,
-            caption=msg,
-            parse_mode=ParseMode.MARKDOWN,
-            disable_web_page_preview=True
-        )
+        with open(image_final, "rb") as picture:
+            message = bot.send_animation(
+                chat_id=update.message.chat_id,
+                animation=picture,
+                caption=msg,
+                parse_mode=ParseMode.MARKDOWN,
+                disable_web_page_preview=True)
 
         if not bet_won:
             # Save messages about lost bets so that they can be removed later
