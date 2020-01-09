@@ -236,6 +236,7 @@ class Bet(TrxBetBotPlugin):
             return
 
         if "blockNumber" not in info:
+            logging.info(f"Job {bet_addr58} - Key 'blockNumber' not in info: {info}")
             return
 
         block_nr = info["blockNumber"]
