@@ -283,7 +283,7 @@ class Bet(TrxBetBotPlugin):
                 send_user = self.get_tron().trx.send(from_hex, float(winnings_trx))
                 logging.info(f"Job {bet_addr58} - Trx from Bot to User: {send_user}")
             except Exception as e:
-                logging.error(f"Job {bet_addr58} - Can't send: {e}")
+                logging.error(f"Job {bet_addr58} - Can't send from BOT to USER: {e}")
                 self.notify(e)
                 return
 
@@ -307,14 +307,8 @@ class Bet(TrxBetBotPlugin):
 
         # --------------- General ---------------
 
-        try:
-            # Send funds from betting address to bot address
-            send_bot = tron.trx.send(bot_addr, amo)
-            logging.info(f"Job {bet_addr58} - Trx from Generated to Bot: {send_bot}")
-        except Exception as e:
-            logging.error(f"Job {bet_addr58} - Can't send: {e}")
-            self.notify(e)
-            return
+        job.schedule_removal()
+        logging.info(f"Job {bet_addr58} - Scheduled job for removal")
 
         # Save betting results to database
         sql = self.get_resource("update_bet.sql")
@@ -330,9 +324,22 @@ class Bet(TrxBetBotPlugin):
             win_trx_id,
             bet_addr58)
 
+        logging.info(f"Job {bet_addr58} - Updated bet data in database")
+
+        try:
+            # Send funds from betting address to bot address
+            send_bot = tron.trx.send(bot_addr, amo)
+            logging.info(f"Job {bet_addr58} - Trx from Generated to Bot: {send_bot}")
+        except Exception as e:
+            logging.error(f"Job {bet_addr58} - Can't send from BETTING to BOT: {e}")
+            self.notify(e)
+            return
+
         # Randomly determine image to show to user
         image_choice = random.choice(os.listdir(image_path))
         image_final = os.path.join(image_path, image_choice)
+
+        logging.info(f"Job {bet_addr58} - Chose image to show: {image_final}")
 
         # Let user know about outcome
         with open(image_final, "rb") as picture:
@@ -349,10 +356,10 @@ class Bet(TrxBetBotPlugin):
             msg_list.append({"chat_id": message.chat_id, "msg_id": message.message_id})
             self.config.set(msg_list, "loss_messages")
 
-        logging.info(f"Job {bet_addr58} - Ending job")
-
         # Remove messages after betting address isn't valid anymore
         self.remove_messages(bot, msg1, msg2, bet_addr58)
+
+        logging.info(f"Job {bet_addr58} - Ending job")
 
     def remove_messages(self, bot, msg1, msg2, bet_addr58):
         try:
