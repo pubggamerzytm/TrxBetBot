@@ -1,4 +1,4 @@
-import  os
+import os
 import time
 import random
 import logging
@@ -11,6 +11,7 @@ from trxbetbot.plugin import TrxBetBotPlugin
 from trxbetbot.trongrid import Trongrid
 
 
+# TODO: After bet issued, save user ID for specific time. Another bet is only possible if time over or bet over
 class Bet(TrxBetBotPlugin):
 
     # Betting
@@ -143,8 +144,12 @@ class Bet(TrxBetBotPlugin):
         bet_addr = tron.default_address
         bet_addr58 = bet_addr["base58"]
 
+        # Messages that bot posted after user executed command
         msg1 = job.context["msg1"]
         msg2 = job.context["msg2"]
+
+        # Read data for this bet from database
+        bet = DBBet(self, bet_addr58, choice, update.effective_user.id)
 
         # Retrieve time in seconds to scan the balance
         time_frame = int(self.config.get("stop_check"))
@@ -152,115 +157,160 @@ class Bet(TrxBetBotPlugin):
         # Check if time limit for balance scanning is reached
         if (start + time_frame) < time.time():
             logging.info(f"Job {bet_addr58} - Ending job because {time_frame} seconds are over")
+
             # Stop repeating job since we reached max time frame to scan for a balance
             job.schedule_removal()
+            logging.info(f"Job {bet_addr58} - Scheduled job for removal")
 
             # Remove messages after betting address isn't valid anymore
             self.remove_messages(bot, msg1, msg2, bet_addr58)
+
+            # If there was a balance...
+            if bet.usr_amount and bet.usr_amount != 0:
+                # ... check if everything is complete
+                if not bet.is_complete():
+                    # TODO: Add which data wasn't set
+                    msg = f"Job {bet_addr58} - Not all data present"
+                    logging.error(f"{msg}: {vars(bet)}")
+                    self.notify(msg)
             return
 
         try:
             # Get balance (in "Sun") of generated address
             balance = tron.trx.get_balance()
+            logging.info(f"Job {bet_addr58} - Get Balance: {balance}")
         except Exception as e:
             logging.error(f"Job {bet_addr58} - Can't retrieve balance: {e}")
-            self.notify(e)
             return
 
         # Check if balance is still 0. If yes, rerun job in specified interval
         if balance == 0:
-            logging.info(f"Job {bet_addr58} - Balance: 0")
+            logging.info(f"Job {bet_addr58} - Balance: 0 TRX")
             return
 
-        amount = tron.fromSun(balance)
-        logging.info(f"Job {bet_addr58} - Balance: {amount} TRX")
-
-        try:
-            transactions = self.tron_grid.get_trx_info_by_account(bet_addr.hex, only_to=True)
-            logging.info(f"Job {bet_addr58} - Transactions: {transactions}")
-        except Exception as e:
-            logging.error(f"Job {bet_addr58} - Can't retrieve transaction: {e}")
-            self.notify(e)
-            return
+        logging.info(f"Job {bet_addr58} - Balance: {tron.fromSun(balance)} TRX")
 
         trx_balance = trx_amount = 0
         trx_id = from_hex = from_base58 = None
 
-        for trx in transactions["data"]:
-            value = trx["raw_data"]["contract"][0]["parameter"]["value"]
+        # We already found a saved transaction
+        if bet.bet_trx_id:
+            trx_balance = bet.usr_amount
+            trx_amount = tron.fromSun(trx_balance)
+            trx_id = bet.bet_trx_id
+            from_base58 = bet.usr_address
+            from_hex = Address().to_hex(from_base58)
+        else:
+            try:
+                transactions = self.tron_grid.get_trx_info_by_account(bet_addr.hex, only_to=True)
+                logging.info(f"Job {bet_addr58} - Get Transactions: {transactions}")
+            except Exception as e:
+                logging.error(f"Job {bet_addr58} - Can't retrieve transaction: {e}")
+                return
 
-            if "asset_name" not in value:
-                trx_id = trx["txID"]
+            # TODO: If more then one trx found, send it back to issuer - REALLY??
+            for trx in transactions["data"]:
+                value = trx["raw_data"]["contract"][0]["parameter"]["value"]
 
-                from_hex = value["owner_address"]
-                from_base58 = (Address().from_hex(from_hex)).decode("utf-8")
+                if "asset_name" not in value:
+                    trx_id = trx["txID"]
+                    bet.bet_trx_id = trx_id
 
-                trx_balance = value["amount"]
-                trx_amount = tron.fromSun(trx_balance)
-                break
+                    from_hex = value["owner_address"]
+                    from_base58 = (Address().from_hex(from_hex)).decode("utf-8")
+                    bet.usr_address = from_base58
 
-        if not trx_id or not from_hex:
-            msg = f"{emo.ERROR} Can't determine transaction ID or user wallet address: {bet_addr58}"
-            update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
-            logging.error(msg)
-            self.notify(msg)
-            return
+                    trx_balance = value["amount"]
+                    bet.usr_amount = trx_balance
+
+                    trx_amount = tron.fromSun(trx_balance)
+                    break
+
+            # Check if a transaction was found
+            if not bet.bet_trx_id:
+                msg = f"Job {bet_addr58} - No transaction found"
+                logging.error(msg)
+                return
 
         amo = float(trx_amount)
         min = self.config.get("min_trx")
         max = self.config.get("max_trx")
 
+        # Check if amount is out of MIN / MAX boundaries
         if amo > max or amo < min:
             msg = f"{emo.ERROR} Balance ({amo} TRX) is not inside min ({min} TRX) and max ({max} " \
                   f"TRX) boundaries. Whole amount will be returned to the wallet it was sent from."
 
-            logging.info(msg)
+            logging.info(f"Job {bet_addr58} - {msg}")
 
             try:
                 # Send funds from betting address to original address
                 send = tron.trx.send(from_hex, amo)
-                logging.info(f"Job {bet_addr58} - Trx from Generated to Original: {send}")
+                logging.info(f"Job {bet_addr58} - Send from Generated to Original: {send}")
             except Exception as e:
-                logging.error(f"Job {bet_addr58} - Can't send: {e}")
-                self.notify(e)
+                logging.error(f"Job {bet_addr58} - Can't send from Generated to User: {e}")
                 return
 
-            update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
+            try:
+                update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
+            except Exception as e:
+                logging.warning(f"Job {bet_addr58} - Can't send funds back for min / max violation: {e}")
+
+            job.schedule_removal()
+            logging.info(f"Job {bet_addr58} - Scheduled job for removal")
+
+            self.remove_messages(bot, msg1, msg2, bet_addr58)
             return
 
-        try:
-            info = tron.trx.get_transaction_info(trx_id)
-        except Exception as e:
-            logging.error(f"Job {bet_addr58} - Can't retrieve transaction info: {e}")
-            self.notify(e)
-            return
+        # Check if we already know the block
+        if bet.bet_trx_block:
+            block_nr = bet.bet_trx_block
+        else:
+            try:
+                info = tron.trx.get_transaction_info(trx_id)
+                logging.info(f"Job {bet_addr58} - Get Transaction Info: {info}")
+            except Exception as e:
+                logging.error(f"Job {bet_addr58} - Can't retrieve transaction info: {e}")
+                return
 
-        if "blockNumber" not in info:
-            logging.info(f"Job {bet_addr58} - Key 'blockNumber' not in info: {info}")
-            return
+            # TODO: Test this
+            if "blockNumber" not in info:
+                logging.info(f"Job {bet_addr58} - Key 'blockNumber' not in info: {info}")
+                return
 
-        block_nr = info["blockNumber"]
+            block_nr = info["blockNumber"]
+            bet.bet_trx_block = block_nr
 
-        try:
-            block = tron.trx.get_block(block_nr)
-        except Exception as e:
-            logging.error(f"Job {bet_addr58} - Can't retrieve block info: {e}")
-            self.notify(e)
-            return
+        # Check if we already know the block hash
+        if bet.bet_trx_block_hash:
+            block_hash = bet.bet_trx_block_hash
+        else:
+            try:
+                block = tron.trx.get_block(block_nr)
+                logging.info(f"Job {bet_addr58} - Get Block: {block}")
+            except Exception as e:
+                logging.error(f"Job {bet_addr58} - Can't retrieve block info: {e}")
+                return
 
-        block_hash = block["blockID"]
+            block_hash = block["blockID"]
+            bet.bet_trx_block_hash = block_hash
+
         last_char = block_hash[-1:]
 
         logging.info(f"Job {bet_addr58} - "
                      f"TXID: {trx_id} - "
                      f"Sender: {from_base58} - "
-                     f"Block: {block} - "
+                     f"Block: {block_nr} - "
                      f"Block Hash: {block_hash} - ")
 
         bot_addr = self.get_tron().default_address.hex
-        bet_won = last_char in choice
 
-        winnings_sun = win_trx_id = None
+        # Check if we already know if the bet was won
+        if bet.bet_won:
+            bet_won = bet.bet_won
+        else:
+            bet_won = last_char in choice
+            bet.bet_won = bet_won
 
         block_link = f"[Block Explorer](https://tronscan.org/#/block/{block_nr})"
 
@@ -269,6 +319,8 @@ class Bet(TrxBetBotPlugin):
             leverage = self.LEVERAGE[len(choice)]
             winnings_sun = int(trx_balance * leverage)
             winnings_trx = tron.fromSun(winnings_sun)
+
+            bet.pay_amount = winnings_sun
 
             msg = self.get_resource("won.md")
             msg = msg.replace("{{winnings}}", str(winnings_trx))
@@ -279,22 +331,26 @@ class Bet(TrxBetBotPlugin):
             log_msg = msg.replace("\n", "")
             logging.info(f"Job {bet_addr58} - MSG: {log_msg}")
 
-            try:
-                # Send funds from bot address to user address
-                send_user = self.get_tron().trx.send(from_hex, float(winnings_trx))
-                logging.info(f"Job {bet_addr58} - Trx from Bot to User: {send_user}")
-            except Exception as e:
-                logging.error(f"Job {bet_addr58} - Can't send from BOT to USER: {e}")
-                self.notify(e)
-                return
+            # Pay winning amount if not done yet
+            if not bet.pay_trx_id:
+                try:
+                    # Send funds from bot address to user address
+                    send_user = self.get_tron().trx.send(from_hex, float(winnings_trx))
+                    logging.info(f"Job {bet_addr58} - Send from Bot to User: {send_user}")
+                except Exception as e:
+                    logging.error(f"Job {bet_addr58} - Can't send from Bot to User: {e}")
+                    return
 
-            win_trx_id = send_user["transaction"]["txID"]
+                bet.pay_trx_id = send_user["transaction"]["txID"]
 
-            # Determine winning animation path
+            # Determine path for winning animation
             image_path = os.path.join(self.get_res_path(), self.WON_DIR)
 
         # --------------- BOT WON ---------------
         else:
+            bet.pay_amount = 0
+            bet.pay_trx_id = "-"
+
             msg = self.get_resource("lost.md")
             msg = msg.replace("{{explorer}}", block_link)
             msg = msg.replace("{{last_char}}", last_char)
@@ -303,38 +359,25 @@ class Bet(TrxBetBotPlugin):
             log_msg = msg.replace("\n", "")
             logging.info(f"Job {bet_addr58} - MSG: {log_msg}")
 
-            # Determine loosing animation path
+            # Determine path for loosing animation
             image_path = os.path.join(self.get_res_path(), self.LOST_DIR)
 
         # --------------- General ---------------
 
+        # Check if we already sent funds from generated wallet to bot wallet
+        if not bet.rtn_trx_id:
+            try:
+                # Send funds from generated address to bot address
+                send_bot = tron.trx.send(bot_addr, amo)
+                logging.info(f"Job {bet_addr58} - Send from Generated to Bot: {send_bot}")
+            except Exception as e:
+                logging.error(f"Job {bet_addr58} - Can't send from Generated to Bot: {e}")
+                return
+
+            bet.rtn_trx_id = send_bot["transaction"]["txID"]
+
         job.schedule_removal()
         logging.info(f"Job {bet_addr58} - Scheduled job for removal")
-
-        # Save betting results to database
-        sql = self.get_resource("update_bet.sql")
-        self.execute_sql(
-            sql,
-            from_base58,
-            balance,
-            trx_id,
-            block_nr,
-            block_hash,
-            str(bet_won),
-            winnings_sun,
-            win_trx_id,
-            bet_addr58)
-
-        logging.info(f"Job {bet_addr58} - Updated bet data in database")
-
-        try:
-            # Send funds from betting address to bot address
-            send_bot = tron.trx.send(bot_addr, amo)
-            logging.info(f"Job {bet_addr58} - Trx from Generated to Bot: {send_bot}")
-        except Exception as e:
-            logging.error(f"Job {bet_addr58} - Can't send from BETTING to BOT: {e}")
-            self.notify(e)
-            return
 
         # Randomly determine image to show to user
         image_choice = random.choice(os.listdir(image_path))
@@ -344,12 +387,15 @@ class Bet(TrxBetBotPlugin):
 
         # Let user know about outcome
         with open(image_final, "rb") as picture:
-            message = bot.send_animation(
-                chat_id=update.message.chat_id,
-                animation=picture,
-                caption=msg,
-                parse_mode=ParseMode.MARKDOWN,
-                disable_web_page_preview=True)
+            try:
+                message = bot.send_animation(
+                    chat_id=update.message.chat_id,
+                    animation=picture,
+                    caption=msg,
+                    parse_mode=ParseMode.MARKDOWN,
+                    disable_web_page_preview=True)
+            except Exception as e:
+                logging.error(f"Job {bet_addr58} - Couldn't send outcome message: {e}")
 
         if not bet_won:
             # Save messages about lost bets so that they can be removed later
@@ -375,3 +421,132 @@ class Bet(TrxBetBotPlugin):
             logging.info(f"Job {bet_addr58} - Removed betting message 2")
         except Exception as e:
             logging.warning(f"Job {bet_addr58} - Couldn't remove message: {e}")
+
+
+# TODO: Move SQL statements to files
+class DBBet:
+
+    def __init__(self, bet: Bet, address, chars, user_id):
+        sql = bet.get_resource("insert_ignore.sql")
+        bet.execute_sql(sql, address, chars, user_id)
+
+        sql = bet.get_resource("select_bet.sql")
+        res = bet.execute_sql(sql, address)
+
+        self.bet = bet
+
+        self.bet_address = res["data"][0][0]  # Can only be read
+        self.bet_chars = res["data"][0][1]  # Can only be read
+        self.usr_id = res["data"][0][2]  # Can only be read
+        self.usr_address = res["data"][0][3]
+        self.usr_amount = res["data"][0][4]
+        self.bet_trx_id = res["data"][0][5]
+        self.bet_trx_block = res["data"][0][6]
+        self.bet_trx_block_hash = res["data"][0][7]
+        self.bet_won = res["data"][0][8]
+        self.pay_amount = res["data"][0][9]
+        self.pay_trx_id = res["data"][0][10]
+        self.date_time = res["data"][0][11]
+        self.rtn_trx_id = res["data"][0][12]
+
+    @property
+    def usr_address(self):
+        return self.__usr_address
+
+    @usr_address.setter
+    def usr_address(self, new_value):
+        sql = f"UPDATE bets SET usr_address = ? WHERE bet_address = ?"
+        self.bet.execute_sql(sql, new_value, self.bet_address)
+
+        self.__usr_address = new_value
+
+    @property
+    def usr_amount(self):
+        return self.__usr_amount
+
+    @usr_amount.setter
+    def usr_amount(self, new_value):
+        sql = f"UPDATE bets SET usr_amount = ? WHERE bet_address = ?"
+        self.bet.execute_sql(sql, new_value, self.bet_address)
+
+        self.__usr_amount = new_value
+
+    @property
+    def bet_trx_id(self):
+        return self.__bet_trx_id
+
+    @bet_trx_id.setter
+    def bet_trx_id(self, new_value):
+        sql = f"UPDATE bets SET bet_trx_id = ? WHERE bet_address = ?"
+        self.bet.execute_sql(sql, new_value, self.bet_address)
+
+        self.__bet_trx_id = new_value
+
+    @property
+    def bet_trx_block(self):
+        return self.__bet_trx_block
+
+    @bet_trx_block.setter
+    def bet_trx_block(self, new_value):
+        sql = f"UPDATE bets SET bet_trx_block = ? WHERE bet_address = ?"
+        self.bet.execute_sql(sql, new_value, self.bet_address)
+
+        self.__bet_trx_block = new_value
+
+    @property
+    def bet_trx_block_hash(self):
+        return self.__bet_trx_block_hash
+
+    @bet_trx_block_hash.setter
+    def bet_trx_block_hash(self, new_value):
+        sql = f"UPDATE bets SET bet_trx_block_hash = ? WHERE bet_address = ?"
+        self.bet.execute_sql(sql, new_value, self.bet_address)
+
+        self.__bet_trx_block_hash = new_value
+
+    @property
+    def bet_won(self):
+        return self.__bet_won
+
+    @bet_won.setter
+    def bet_won(self, new_value):
+        sql = f"UPDATE bets SET bet_won = ? WHERE bet_address = ?"
+        self.bet.execute_sql(sql, new_value, self.bet_address)
+
+        self.__bet_won = new_value
+
+    @property
+    def pay_amount(self):
+        return self.__pay_amount
+
+    @pay_amount.setter
+    def pay_amount(self, new_value):
+        sql = f"UPDATE bets SET pay_amount = ? WHERE bet_address = ?"
+        self.bet.execute_sql(sql, new_value, self.bet_address)
+
+        self.__pay_amount = new_value
+
+    @property
+    def pay_trx_id(self):
+        return self.__pay_trx_id
+
+    @pay_trx_id.setter
+    def pay_trx_id(self, new_value):
+        sql = f"UPDATE bets SET pay_trx_id = ? WHERE bet_address = ?"
+        self.bet.execute_sql(sql, new_value, self.bet_address)
+
+        self.__pay_trx_id = new_value
+
+    @property
+    def rtn_trx_id(self):
+        return self.__rtn_trx_id
+
+    @rtn_trx_id.setter
+    def rtn_trx_id(self, new_value):
+        sql = f"UPDATE bets SET rtn_trx_id = ? WHERE bet_address = ?"
+        self.bet.execute_sql(sql, new_value, self.bet_address)
+
+        self.__rtn_trx_id = new_value
+
+    def is_complete(self):
+        return None not in vars(self).values()
