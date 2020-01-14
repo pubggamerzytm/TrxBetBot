@@ -169,7 +169,6 @@ class Bet(TrxBetBotPlugin):
             if bet.usr_amount and bet.usr_amount != 0:
                 # ... check if everything is complete
                 if not bet.is_complete():
-                    # TODO: Add which data wasn't set
                     msg = f"Job {bet_addr58} - Not all data present"
                     logging.error(f"{msg}: {vars(bet)}")
                     self.notify(msg)
@@ -178,12 +177,11 @@ class Bet(TrxBetBotPlugin):
         try:
             # Get balance (in "Sun") of generated address
             balance = tron.trx.get_balance()
-            logging.info(f"Job {bet_addr58} - Get Balance: {balance}")
         except Exception as e:
             logging.error(f"Job {bet_addr58} - Can't retrieve balance: {e}")
             return
 
-        # Check if balance is still 0. If yes, rerun job in specified interval
+        # Check if balance is 0. If yes, rerun job in specified interval
         if balance == 0:
             logging.info(f"Job {bet_addr58} - Balance: 0 TRX")
             return
@@ -209,7 +207,7 @@ class Bet(TrxBetBotPlugin):
                 return
 
             # TODO: If more then one trx found, send it back to issuer - REALLY??
-            for trx in transactions["data"]:
+            for trx in reversed(transactions["data"]):
                 value = trx["raw_data"]["contract"][0]["parameter"]["value"]
 
                 if "asset_name" not in value:
@@ -238,7 +236,7 @@ class Bet(TrxBetBotPlugin):
 
         # Check if amount is out of MIN / MAX boundaries
         if amo > max or amo < min:
-            msg = f"{emo.ERROR} Balance ({amo} TRX) is not inside min ({min} TRX) and max ({max} " \
+            msg = f"{emo.ERROR} Sent amount of {amo} TRX is not inside min ({min} TRX) and max ({max} " \
                   f"TRX) boundaries. Whole amount will be returned to the wallet it was sent from."
 
             logging.info(f"Job {bet_addr58} - {msg}")
@@ -273,7 +271,6 @@ class Bet(TrxBetBotPlugin):
                 logging.error(f"Job {bet_addr58} - Can't retrieve transaction info: {e}")
                 return
 
-            # TODO: Test this
             if "blockNumber" not in info:
                 logging.info(f"Job {bet_addr58} - Key 'blockNumber' not in info: {info}")
                 return
@@ -423,7 +420,6 @@ class Bet(TrxBetBotPlugin):
             logging.warning(f"Job {bet_addr58} - Couldn't remove message: {e}")
 
 
-# TODO: Move SQL statements to files
 class DBBet:
 
     def __init__(self, bet: Bet, address, chars, user_id):
@@ -455,7 +451,7 @@ class DBBet:
 
     @usr_address.setter
     def usr_address(self, new_value):
-        sql = f"UPDATE bets SET usr_address = ? WHERE bet_address = ?"
+        sql = self.get_sql("usr_address")
         self.bet.execute_sql(sql, new_value, self.bet_address)
 
         self.__usr_address = new_value
@@ -466,7 +462,7 @@ class DBBet:
 
     @usr_amount.setter
     def usr_amount(self, new_value):
-        sql = f"UPDATE bets SET usr_amount = ? WHERE bet_address = ?"
+        sql = self.get_sql("usr_amount")
         self.bet.execute_sql(sql, new_value, self.bet_address)
 
         self.__usr_amount = new_value
@@ -477,7 +473,7 @@ class DBBet:
 
     @bet_trx_id.setter
     def bet_trx_id(self, new_value):
-        sql = f"UPDATE bets SET bet_trx_id = ? WHERE bet_address = ?"
+        sql = self.get_sql("bet_trx_id")
         self.bet.execute_sql(sql, new_value, self.bet_address)
 
         self.__bet_trx_id = new_value
@@ -488,7 +484,7 @@ class DBBet:
 
     @bet_trx_block.setter
     def bet_trx_block(self, new_value):
-        sql = f"UPDATE bets SET bet_trx_block = ? WHERE bet_address = ?"
+        sql = self.get_sql("bet_trx_block")
         self.bet.execute_sql(sql, new_value, self.bet_address)
 
         self.__bet_trx_block = new_value
@@ -499,7 +495,7 @@ class DBBet:
 
     @bet_trx_block_hash.setter
     def bet_trx_block_hash(self, new_value):
-        sql = f"UPDATE bets SET bet_trx_block_hash = ? WHERE bet_address = ?"
+        sql = self.get_sql("bet_trx_block_hash")
         self.bet.execute_sql(sql, new_value, self.bet_address)
 
         self.__bet_trx_block_hash = new_value
@@ -510,7 +506,7 @@ class DBBet:
 
     @bet_won.setter
     def bet_won(self, new_value):
-        sql = f"UPDATE bets SET bet_won = ? WHERE bet_address = ?"
+        sql = self.get_sql("bet_won")
         self.bet.execute_sql(sql, new_value, self.bet_address)
 
         self.__bet_won = new_value
@@ -521,7 +517,7 @@ class DBBet:
 
     @pay_amount.setter
     def pay_amount(self, new_value):
-        sql = f"UPDATE bets SET pay_amount = ? WHERE bet_address = ?"
+        sql = self.get_sql("pay_amount")
         self.bet.execute_sql(sql, new_value, self.bet_address)
 
         self.__pay_amount = new_value
@@ -532,7 +528,7 @@ class DBBet:
 
     @pay_trx_id.setter
     def pay_trx_id(self, new_value):
-        sql = f"UPDATE bets SET pay_trx_id = ? WHERE bet_address = ?"
+        sql = self.get_sql("pay_trx_id")
         self.bet.execute_sql(sql, new_value, self.bet_address)
 
         self.__pay_trx_id = new_value
@@ -543,10 +539,13 @@ class DBBet:
 
     @rtn_trx_id.setter
     def rtn_trx_id(self, new_value):
-        sql = f"UPDATE bets SET rtn_trx_id = ? WHERE bet_address = ?"
+        sql = self.get_sql("rtn_trx_id")
         self.bet.execute_sql(sql, new_value, self.bet_address)
 
         self.__rtn_trx_id = new_value
+
+    def get_sql(self, variable):
+        return f"UPDATE bets SET {variable} = ? WHERE bet_address = ?"
 
     def is_complete(self):
         return None not in vars(self).values()
