@@ -11,5 +11,6 @@ CREATE TABLE bets (
     pay_amount INTEGER,
     pay_trx_id TEXT,
 	date_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+	rtn_trx_id TEXT,
 	FOREIGN KEY(bet_address) REFERENCES addresses(address)
 )
