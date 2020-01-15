@@ -382,6 +382,8 @@ class Bet(TrxBetBotPlugin):
 
         logging.info(f"Job {bet_addr58} - Chose image to show: {image_final}")
 
+        message = None
+
         # Let user know about outcome
         with open(image_final, "rb") as picture:
             try:
@@ -395,10 +397,11 @@ class Bet(TrxBetBotPlugin):
                 logging.error(f"Job {bet_addr58} - Couldn't send outcome message: {e}")
 
         if not bet_won:
-            # Save messages about lost bets so that they can be removed later
-            msg_list = self.config.get("loss_messages")
-            msg_list.append({"chat_id": message.chat_id, "msg_id": message.message_id})
-            self.config.set(msg_list, "loss_messages")
+            if message:
+                # Save messages about lost bets so that they can be removed later
+                msg_list = self.config.get("loss_messages")
+                msg_list.append({"chat_id": message.chat_id, "msg_id": message.message_id})
+                self.config.set(msg_list, "loss_messages")
 
         # Remove messages after betting address isn't valid anymore
         self.remove_messages(bot, msg1, msg2, bet_addr58)
