@@ -14,13 +14,11 @@ from trxbetbot.trongrid import Trongrid
 # TODO: After bet issued, save user ID for specific time. Another bet is only possible if time over or bet over
 class Bet(TrxBetBotPlugin):
 
-    # Betting
-    VALID_CHARS = "0123456789abcdef"
-    LEVERAGE = {1: 15.2, 2: 7.6, 3: 5.06, 4: 3.8, 5: 3.04, 6: 2.53, 7: 2.17, 8: 1.9,
-                9: 1.68, 10: 1.52, 11: 1.38, 12: 1.26, 13: 1.16, 14: 1.08, 15: 1.01}
-
-    WON_DIR = "won"
-    LOST_DIR = "lost"
+    _WON_DIR = "won"
+    _LOST_DIR = "lost"
+    _VALID_CHARS = "0123456789abcdef"
+    _LEVERAGE = {1: 15.2, 2: 7.6, 3: 5.06, 4: 3.8, 5: 3.04, 6: 2.53, 7: 2.17, 8: 1.9,
+                 9: 1.68, 10: 1.52, 11: 1.38, 12: 1.26, 13: 1.16, 14: 1.08, 15: 1.01}
 
     tron_grid = Trongrid()
 
@@ -51,12 +49,12 @@ class Bet(TrxBetBotPlugin):
         count = len(chars)
 
         if not self.contains_all(chars):
-            msg = f"{emo.ERROR} You can only bet on one or more of these characters `{self.VALID_CHARS}`"
+            msg = f"{emo.ERROR} You can only bet on one or more of these characters `{self._VALID_CHARS}`"
             update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             return
 
         if count > 15:
-            msg = f"{emo.ERROR} Max characters to bet on is {len(self.VALID_CHARS)-1}"
+            msg = f"{emo.ERROR} Max characters to bet on is {len(self._VALID_CHARS) - 1}"
             update.message.reply_text(msg)
             return
 
@@ -84,8 +82,8 @@ class Bet(TrxBetBotPlugin):
         self.execute_sql(sql, account.address.base58, account.private_key)
 
         choice = "".join(sorted(chars))
-        chance = count / len(self.VALID_CHARS) * 100
-        leverage = self.LEVERAGE[len(chars)]
+        chance = count / len(self._VALID_CHARS) * 100
+        leverage = self._LEVERAGE[len(chars)]
 
         min_trx = self.config.get("min_trx")
         max_trx = self.config.get("max_trx")
@@ -133,7 +131,7 @@ class Bet(TrxBetBotPlugin):
 
     def contains_all(self, chars):
         """ Check if characters in 'chars' are all valid characters """
-        return 0 not in [c in self.VALID_CHARS for c in chars]
+        return 0 not in [c in self._VALID_CHARS for c in chars]
 
     def scan_balance(self, bot, job):
         tron = job.context["tron"]
@@ -206,7 +204,7 @@ class Bet(TrxBetBotPlugin):
                 logging.error(f"Job {bet_addr58} - Can't retrieve transaction: {e}")
                 return
 
-            # TODO: If more then one trx found, send it back to issuer - REALLY??
+            # TODO: If more then one trx found, send it back to issuer
             for trx in reversed(transactions["data"]):
                 value = trx["raw_data"]["contract"][0]["parameter"]["value"]
 
@@ -313,7 +311,7 @@ class Bet(TrxBetBotPlugin):
 
         # --------------- USER WON ---------------
         if bet_won:
-            leverage = self.LEVERAGE[len(choice)]
+            leverage = self._LEVERAGE[len(choice)]
             winnings_sun = int(trx_balance * leverage)
             winnings_trx = tron.fromSun(winnings_sun)
 
@@ -341,7 +339,7 @@ class Bet(TrxBetBotPlugin):
                 bet.pay_trx_id = send_user["transaction"]["txID"]
 
             # Determine path for winning animation
-            image_path = os.path.join(self.get_res_path(), self.WON_DIR)
+            image_path = os.path.join(self.get_res_path(), self._WON_DIR)
 
         # --------------- BOT WON ---------------
         else:
@@ -357,7 +355,7 @@ class Bet(TrxBetBotPlugin):
             logging.info(f"Job {bet_addr58} - MSG: {log_msg}")
 
             # Determine path for loosing animation
-            image_path = os.path.join(self.get_res_path(), self.LOST_DIR)
+            image_path = os.path.join(self.get_res_path(), self._LOST_DIR)
 
         # --------------- General ---------------
 
@@ -392,7 +390,8 @@ class Bet(TrxBetBotPlugin):
                     animation=picture,
                     caption=msg,
                     parse_mode=ParseMode.MARKDOWN,
-                    disable_web_page_preview=True)
+                    disable_web_page_preview=True,
+                    reply_to_message_id=update.message.message_id)
             except Exception as e:
                 logging.error(f"Job {bet_addr58} - Couldn't send outcome message: {e}")
 
