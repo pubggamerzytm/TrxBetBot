@@ -338,7 +338,7 @@ class TrxBetBotPlugin:
         if self.global_config.get("admin", "notify_on_error"):
             for admin in self.global_config.get("admin", "ids"):
                 try:
-                    msg = f"{emo.ALERT} Admin Notification:\n{some_input}"
+                    msg = f"{emo.ALERT} Admin Notification {emo.ALERT}\n{some_input}"
                     self._tgb.updater.bot.send_message(admin, msg)
                 except Exception as e:
                     error = f"Not possible to notify admin id '{admin}'"
