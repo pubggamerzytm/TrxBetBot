@@ -334,6 +334,12 @@ class Bet(TrxBetBotPlugin):
                     logging.info(f"Job {bet_addr58} - Send from Bot to User: {send_user}")
                 except Exception as e:
                     logging.error(f"Job {bet_addr58} - Can't send from Bot to User: {e}")
+
+                    if "Cannot transfer TRX to the same account" in str(e):
+                        logging.info(f"Job {bet_addr58} - Ending job")
+                        self.notify(f"Bet {bet_addr58} - {e}")
+                        job.schedule_removal()
+
                     return
 
                 bet.pay_trx_id = send_user["transaction"]["txID"]
