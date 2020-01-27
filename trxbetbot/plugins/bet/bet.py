@@ -11,7 +11,6 @@ from trxbetbot.plugin import TrxBetBotPlugin
 from trxbetbot.trongrid import Trongrid
 
 
-# TODO: After bet issued, save user ID for specific time. Another bet is only possible if time over or bet over
 class Bet(TrxBetBotPlugin):
 
     _WON_DIR = "won"
@@ -204,23 +203,36 @@ class Bet(TrxBetBotPlugin):
                 logging.error(f"Job {bet_addr58} - Can't retrieve transaction: {e}")
                 return
 
-            # TODO: If more then one trx found, send it back to issuer
+            found = False
             for trx in reversed(transactions["data"]):
                 value = trx["raw_data"]["contract"][0]["parameter"]["value"]
 
+                # We check just for TRX
                 if "asset_name" not in value:
                     trx_id = trx["txID"]
-                    bet.bet_trx_id = trx_id
-
                     from_hex = value["owner_address"]
                     from_base58 = (Address().from_hex(from_hex)).decode("utf-8")
-                    bet.usr_address = from_base58
-
                     trx_balance = value["amount"]
-                    bet.usr_amount = trx_balance
-
                     trx_amount = tron.fromSun(trx_balance)
-                    break
+
+                    # We only take the first transaction ...
+                    if not found:
+                        bet.bet_trx_id = trx_id
+                        bet.usr_address = from_base58
+                        bet.usr_amount = trx_balance
+
+                        found = True
+
+                    # ... everything else will be returned
+                    else:
+                        try:
+                            # Return funds from betting address to original address
+                            send = tron.trx.send(from_hex, float(trx_amount))
+                            msg = "Returned from Generated to User (not first transaction)"
+                            logging.info(f"Job {bet_addr58} - {msg}: {send}")
+                        except Exception as e:
+                            msg = "Can't return from Generated to User (not first transaction)"
+                            logging.error(f"Job {bet_addr58} - {msg}: {e}")
 
             # Check if a transaction was found
             if not bet.bet_trx_id:
@@ -242,7 +254,7 @@ class Bet(TrxBetBotPlugin):
             try:
                 # Send funds from betting address to original address
                 send = tron.trx.send(from_hex, amo)
-                logging.info(f"Job {bet_addr58} - Send from Generated to Original: {send}")
+                logging.info(f"Job {bet_addr58} - Send from Generated to User: {send}")
             except Exception as e:
                 logging.error(f"Job {bet_addr58} - Can't send from Generated to User: {e}")
                 return
