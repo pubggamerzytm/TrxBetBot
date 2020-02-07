@@ -2,11 +2,13 @@ import os
 import json
 import logging
 import trxbetbot.constants as con
+import sqlite3
 
 from argparse import ArgumentParser
 from trxbetbot.tgbot import TelegramBot
 from trxbetbot.config import ConfigManager as Cfg
 from logging.handlers import TimedRotatingFileHandler
+from trxbetbot.web import FlaskAppWrapper
 
 
 # TODO: In case database will be removed on the fly, check if user & address is available and if not, create them
@@ -172,10 +174,64 @@ class TrxBetBot:
             logging.error(f"{repr(e)} - {cls_name}")
             exit("ERROR: Can't read Tron wallet")
 
+    def _get_bet(self, key):
+        return self._get_data("bets", key)
+
+    def _get_address(self, key):
+        return self._get_data("addresses", key)
+
+    def _get_data(self, table, key):
+        path = os.path.dirname(os.path.realpath(__file__))
+        path = os.path.join(path, "plugins", "bet", "data", "bet.db")
+
+        if not os.path.isfile(path):
+            return {"error": f"File doesn't exist: {path}"}
+
+        connection = sqlite3.connect(path)
+        cursor = connection.cursor()
+
+        if key:
+            column = "bet_address" if table == "bets" else "address"
+            sql = f"SELECT * FROM {table} WHERE {column} = ?"
+            cursor.execute(sql, [key])
+        else:
+            sql = f"SELECT * FROM {table}"
+            cursor.execute(sql)
+
+        connection.commit()
+        data = cursor.fetchall()
+        connection.close()
+        return data
+
     def start(self):
         if self.cfg.get("webhook", "use_webhook"):
             self.tgb.bot_start_webhook()
         else:
             self.tgb.bot_start_polling()
+
+        if self.cfg.get("web"):
+            a = FlaskAppWrapper(__name__)
+
+            a.add_endpoint(
+                endpoint='/',
+                endpoint_name='/')
+
+            a.add_endpoint(
+                endpoint='/bet',
+                endpoint_name='/bet',
+                handler=self._get_bet)
+
+            a.add_endpoint(
+                endpoint='/address',
+                endpoint_name='/address',
+                handler=self._get_address)
+
+            a.add_endpoint(
+                endpoint='/wallet',
+                endpoint_name='/wallet',
+                handler=self._get_bot_wallet,
+                secret="privkey")
+
+            a.run()
 
         self.tgb.bot_idle()
