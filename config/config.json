@@ -19,5 +19,6 @@
     },
     "database": {
         "use_db": true
-    }
+    },
+    "web": true
 }
