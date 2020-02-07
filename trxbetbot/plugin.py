@@ -10,12 +10,13 @@ from tronapi import Tron
 from pathlib import Path
 from telegram import ChatAction, Chat
 from trxbetbot.config import ConfigManager
+from trxbetbot.tgbot import TelegramBot
 
 
 # TODO: Add properties where needed
 class TrxBetBotPlugin:
 
-    def __init__(self, tg_bot):
+    def __init__(self, tg_bot: TelegramBot):
         self._tgb = tg_bot
 
         # Create access to global config
