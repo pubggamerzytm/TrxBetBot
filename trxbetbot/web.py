@@ -1,7 +1,9 @@
+import os
 import flask
 import inspect
+import trxbetbot.constants as con
 
-from flask import Flask, request
+from flask import Flask, request, render_template
 
 
 class EndpointAction(object):
@@ -14,7 +16,7 @@ class EndpointAction(object):
         if self.secret:
             secret = request.args.get('secret')
             if not secret or secret != self.secret:
-                return str()
+                return render_template("default.html")
 
         if self.action:
             param = str(inspect.signature(self.action))[1:-1]
@@ -29,7 +31,7 @@ class EndpointAction(object):
             else:
                 result = self.action()
         else:
-            result = str()
+            return render_template("default.html")
 
         # Create the answer (bundle it in a correctly formatted HTTP answer)
         if isinstance(result, str):
@@ -46,7 +48,8 @@ class EndpointAction(object):
 class FlaskAppWrapper(object):
 
     def __init__(self, name):
-        self.app = Flask(name)
+        template_dir = os.path.join(os.pardir, con.DIR_RES, con.DIR_TEM)
+        self.app = Flask(name, template_folder=template_dir)
 
     def run(self):
         self.app.run(debug=False)
