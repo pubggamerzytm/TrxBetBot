@@ -20,5 +20,8 @@
     "database": {
         "use_db": true
     },
-    "web": true
+    "web": {
+        "use_web": true,
+        "password": "getiton"
+    }
 }
