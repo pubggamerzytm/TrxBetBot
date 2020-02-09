@@ -209,7 +209,9 @@ class TrxBetBot:
         else:
             self.tgb.bot_start_polling()
 
-        if self.cfg.get("web"):
+        if self.cfg.get("web", "use_web"):
+            password = self.cfg.get("web", "password")
+
             a = FlaskAppWrapper(__name__)
 
             a.add_endpoint(
@@ -219,18 +221,20 @@ class TrxBetBot:
             a.add_endpoint(
                 endpoint='/bet',
                 endpoint_name='/bet',
-                handler=self._get_bet)
+                handler=self._get_bet,
+                secret=password)
 
             a.add_endpoint(
                 endpoint='/address',
                 endpoint_name='/address',
-                handler=self._get_address)
+                handler=self._get_address,
+                secret=password)
 
             a.add_endpoint(
                 endpoint='/wallet',
                 endpoint_name='/wallet',
                 handler=self._get_bot_wallet,
-                secret="privkey")
+                secret=password)
 
             a.run()
 
