@@ -185,17 +185,8 @@ class Bet(TrxBetBotPlugin):
 
         logging.info(f"Job {bet_addr58} - Balance: {tron.fromSun(balance)} TRX")
 
-        trx_balance = trx_amount = 0
-        trx_id = from_hex = from_base58 = None
-
         # We already found a saved transaction
-        if bet.bet_trx_id:
-            trx_balance = bet.usr_amount
-            trx_amount = tron.fromSun(trx_balance)
-            trx_id = bet.bet_trx_id
-            from_base58 = bet.usr_address
-            from_hex = Address().to_hex(from_base58)
-        else:
+        if not bet.bet_trx_id:
             try:
                 transactions = self.tron_grid.get_trx_info_by_account(bet_addr.hex, only_to=True)
                 logging.info(f"Job {bet_addr58} - Get Transactions: {transactions}")
@@ -228,19 +219,36 @@ class Bet(TrxBetBotPlugin):
                         try:
                             # Return funds from betting address to original address
                             send = tron.trx.send(from_hex, float(trx_amount))
+
+                            # An error was returned
+                            if "code" in send and "message" in send:
+                                raise Exception(send["message"])
+
                             msg = "Returned from Generated to User (not first transaction)"
                             logging.info(f"Job {bet_addr58} - {msg}: {send}")
                         except Exception as e:
                             msg = "Can't return from Generated to User (not first transaction)"
                             logging.error(f"Job {bet_addr58} - {msg}: {e}")
 
-            # Check if a transaction was found
-            if not bet.bet_trx_id:
-                msg = f"Job {bet_addr58} - No transaction found"
-                logging.error(msg)
-                return
+        # Check if a transaction was found
+        if not bet.bet_trx_id:
+            msg = f"Job {bet_addr58} - No transaction found"
+            logging.error(msg)
+            return
+        # Check if a user address was found
+        if not bet.usr_address:
+            msg = f"Job {bet_addr58} - No user address found"
+            logging.error(msg)
+            return
+        # Check if a user amount was found
+        if not bet.usr_amount:
+            msg = f"Job {bet_addr58} - No user amount found"
+            logging.error(msg)
+            return
 
-        amo = float(trx_amount)
+        from_hex = Address().to_hex(bet.usr_address)
+
+        amo = float(tron.fromSun(bet.usr_amount))
         min = self.config.get("min_trx")
         max = self.config.get("max_trx")
 
@@ -254,6 +262,11 @@ class Bet(TrxBetBotPlugin):
             try:
                 # Send funds from betting address to original address
                 send = tron.trx.send(from_hex, amo)
+
+                # An error was returned
+                if "code" in send and "message" in send:
+                    raise Exception(send["message"])
+
                 logging.info(f"Job {bet_addr58} - Send from Generated to User: {send}")
             except Exception as e:
                 logging.error(f"Job {bet_addr58} - Can't send from Generated to User: {e}")
@@ -271,11 +284,9 @@ class Bet(TrxBetBotPlugin):
             return
 
         # Check if we already know the block
-        if bet.bet_trx_block:
-            block_nr = bet.bet_trx_block
-        else:
+        if not bet.bet_trx_block:
             try:
-                info = tron.trx.get_transaction_info(trx_id)
+                info = tron.trx.get_transaction_info(bet.bet_trx_id)
                 logging.info(f"Job {bet_addr58} - Get Transaction Info: {info}")
             except Exception as e:
                 logging.error(f"Job {bet_addr58} - Can't retrieve transaction info: {e}")
@@ -285,46 +296,39 @@ class Bet(TrxBetBotPlugin):
                 logging.info(f"Job {bet_addr58} - Key 'blockNumber' not in info: {info}")
                 return
 
-            block_nr = info["blockNumber"]
-            bet.bet_trx_block = block_nr
+            bet.bet_trx_block = info["blockNumber"]
 
         # Check if we already know the block hash
-        if bet.bet_trx_block_hash:
-            block_hash = bet.bet_trx_block_hash
-        else:
+        if not bet.bet_trx_block_hash:
             try:
-                block = tron.trx.get_block(block_nr)
+                block = tron.trx.get_block(bet.bet_trx_block)
                 logging.info(f"Job {bet_addr58} - Get Block: {block}")
             except Exception as e:
                 logging.error(f"Job {bet_addr58} - Can't retrieve block info: {e}")
                 return
 
-            block_hash = block["blockID"]
-            bet.bet_trx_block_hash = block_hash
+            bet.bet_trx_block_hash = block["blockID"]
 
-        last_char = block_hash[-1:]
+        last_char = bet.bet_trx_block_hash[-1:]
 
         logging.info(f"Job {bet_addr58} - "
-                     f"TXID: {trx_id} - "
-                     f"Sender: {from_base58} - "
-                     f"Block: {block_nr} - "
-                     f"Block Hash: {block_hash} - ")
+                     f"TXID: {bet.bet_trx_id} - "
+                     f"Sender: {bet.usr_address} - "
+                     f"Block: {bet.bet_trx_block} - "
+                     f"Block Hash: {bet.bet_trx_block_hash}")
 
         bot_addr = self.get_tron().default_address.hex
 
-        # Check if we already know if the bet was won
-        if bet.bet_won:
-            bet_won = bet.bet_won
-        else:
-            bet_won = last_char in choice
-            bet.bet_won = bet_won
+        # If not already saved, save if bet was won or not
+        if bet.bet_won is None:
+            bet.bet_won = last_char in choice
 
-        block_link = f"[Block Explorer](https://tronscan.org/#/block/{block_nr})"
+        block_link = f"[Block Explorer](https://tronscan.org/#/block/{bet.bet_trx_block})"
 
         # --------------- USER WON ---------------
-        if bet_won:
+        if bet.bet_won:
             leverage = self._LEVERAGE[len(choice)]
-            winnings_sun = int(trx_balance * leverage)
+            winnings_sun = int(bet.usr_amount * leverage)
             winnings_trx = tron.fromSun(winnings_sun)
 
             bet.pay_amount = winnings_sun
@@ -343,6 +347,11 @@ class Bet(TrxBetBotPlugin):
                 try:
                     # Send funds from bot address to user address
                     send_user = self.get_tron().trx.send(from_hex, float(winnings_trx))
+
+                    # An error was returned
+                    if "code" in send_user and "message" in send_user:
+                        raise Exception(send_user["message"])
+
                     logging.info(f"Job {bet_addr58} - Send from Bot to User: {send_user}")
                 except Exception as e:
                     logging.error(f"Job {bet_addr58} - Can't send from Bot to User: {e}")
@@ -382,6 +391,11 @@ class Bet(TrxBetBotPlugin):
             try:
                 # Send funds from generated address to bot address
                 send_bot = tron.trx.send(bot_addr, amo)
+
+                # An error was returned
+                if "code" in send_bot and "message" in send_bot:
+                    raise Exception(send_bot["message"])
+
                 logging.info(f"Job {bet_addr58} - Send from Generated to Bot: {send_bot}")
             except Exception as e:
                 logging.error(f"Job {bet_addr58} - Can't send from Generated to Bot: {e}")
@@ -413,7 +427,7 @@ class Bet(TrxBetBotPlugin):
             except Exception as e:
                 logging.error(f"Job {bet_addr58} - Couldn't send outcome message: {e}")
 
-        if not bet_won:
+        if not bet.bet_won:
             if message:
                 # Save messages about lost bets so that they can be removed later
                 msg_list = self.config.get("loss_messages")
@@ -473,7 +487,6 @@ class DBBet:
     def usr_address(self, new_value):
         sql = self.get_sql("usr_address")
         self.bet.execute_sql(sql, new_value, self.bet_address)
-
         self.__usr_address = new_value
 
     @property
@@ -484,7 +497,6 @@ class DBBet:
     def usr_amount(self, new_value):
         sql = self.get_sql("usr_amount")
         self.bet.execute_sql(sql, new_value, self.bet_address)
-
         self.__usr_amount = new_value
 
     @property
@@ -495,7 +507,6 @@ class DBBet:
     def bet_trx_id(self, new_value):
         sql = self.get_sql("bet_trx_id")
         self.bet.execute_sql(sql, new_value, self.bet_address)
-
         self.__bet_trx_id = new_value
 
     @property
@@ -506,7 +517,6 @@ class DBBet:
     def bet_trx_block(self, new_value):
         sql = self.get_sql("bet_trx_block")
         self.bet.execute_sql(sql, new_value, self.bet_address)
-
         self.__bet_trx_block = new_value
 
     @property
@@ -517,7 +527,6 @@ class DBBet:
     def bet_trx_block_hash(self, new_value):
         sql = self.get_sql("bet_trx_block_hash")
         self.bet.execute_sql(sql, new_value, self.bet_address)
-
         self.__bet_trx_block_hash = new_value
 
     @property
@@ -528,7 +537,6 @@ class DBBet:
     def bet_won(self, new_value):
         sql = self.get_sql("bet_won")
         self.bet.execute_sql(sql, new_value, self.bet_address)
-
         self.__bet_won = new_value
 
     @property
@@ -539,7 +547,6 @@ class DBBet:
     def pay_amount(self, new_value):
         sql = self.get_sql("pay_amount")
         self.bet.execute_sql(sql, new_value, self.bet_address)
-
         self.__pay_amount = new_value
 
     @property
@@ -550,7 +557,6 @@ class DBBet:
     def pay_trx_id(self, new_value):
         sql = self.get_sql("pay_trx_id")
         self.bet.execute_sql(sql, new_value, self.bet_address)
-
         self.__pay_trx_id = new_value
 
     @property
@@ -561,7 +567,6 @@ class DBBet:
     def rtn_trx_id(self, new_value):
         sql = self.get_sql("rtn_trx_id")
         self.bet.execute_sql(sql, new_value, self.bet_address)
-
         self.__rtn_trx_id = new_value
 
     def get_sql(self, variable):
