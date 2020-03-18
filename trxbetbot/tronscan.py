@@ -5,9 +5,9 @@ from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 
 
-class Trongrid:
+class Tronscan:
 
-    __API_URL_BASE = "https://api.trongrid.io/v1/"
+    __API_URL_BASE = "https://apilist.tronscan.org/api/"
 
     def __init__(self, api_base_url=__API_URL_BASE):
         self.api_base_url = api_base_url
@@ -23,10 +23,10 @@ class Trongrid:
             content = json.loads(response.content.decode("utf-8"))
             response.raise_for_status()
             return content
-        except Exception as e:
+        except Exception:
             try:
                 raise ValueError(content)
-            except UnboundLocalError as e:
+            except UnboundLocalError:
                 pass
             raise
 
@@ -38,7 +38,7 @@ class Trongrid:
             api_url = api_url[:-1]
         return api_url
 
-    def get_trx_info_by_account(self, address, **kwargs):
-        api_url = f"{self.api_base_url}accounts/{address}/transactions"
-        api_url = self.__api_url_params(api_url, kwargs)
+    def get_transactions_for(self, address):
+        api_url = f"{self.api_base_url}transaction"
+        api_url = self.__api_url_params(api_url, {"address": address})
         return self.__request(api_url)

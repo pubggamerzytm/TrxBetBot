@@ -8,18 +8,19 @@ from tronapi import Tron
 from tronapi.main import Address
 from telegram import ParseMode
 from trxbetbot.plugin import TrxBetBotPlugin
-from trxbetbot.trongrid import Trongrid
+from trxbetbot.tronscan import Tronscan
 
 
 class Bet(TrxBetBotPlugin):
 
+    _MIN_BET = 2
     _WON_DIR = "won"
     _LOST_DIR = "lost"
     _VALID_CHARS = "0123456789abcdef"
     _LEVERAGE = {1: 15.2, 2: 7.6, 3: 5.06, 4: 3.8, 5: 3.04, 6: 2.53, 7: 2.17, 8: 1.9,
                  9: 1.68, 10: 1.52, 11: 1.38, 12: 1.26, 13: 1.16, 14: 1.08, 15: 1.01}
 
-    tron_grid = Trongrid()
+    tronscan = Tronscan()
 
     def __enter__(self):
         if not self.table_exists("addresses"):
@@ -52,7 +53,16 @@ class Bet(TrxBetBotPlugin):
             update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             return
 
-        if count > 15:
+        # TODO: Test
+        # Bet has to be at least 2 characters
+        if count < self._MIN_BET:
+            msg = f"{emo.ERROR} Min characters to bet on is {self._MIN_BET}"
+            update.message.reply_text(msg)
+            return
+
+        # TODO: Test
+        # Bet can't exceed (VALID_CHARS - 1) characters
+        if count > (len(self._VALID_CHARS) - 1):
             msg = f"{emo.ERROR} Max characters to bet on is {len(self._VALID_CHARS) - 1}"
             update.message.reply_text(msg)
             return
@@ -81,7 +91,7 @@ class Bet(TrxBetBotPlugin):
         self.execute_sql(sql, account.address.base58, account.private_key)
 
         choice = "".join(sorted(chars))
-        chance = count / len(self._VALID_CHARS) * 100
+        chance = count / len(self._VALID_CHARS) * 100  # TODO: Change
         leverage = self._LEVERAGE[len(chars)]
 
         min_trx = self.config.get("min_trx")
@@ -188,7 +198,7 @@ class Bet(TrxBetBotPlugin):
         # We already found a saved transaction
         if not bet.bet_trx_id:
             try:
-                transactions = self.tron_grid.get_trx_info_by_account(bet_addr.hex, only_to=True)
+                transactions = self.tronscan.get_transactions_for(bet_addr58)
                 logging.info(f"Job {bet_addr58} - Get Transactions: {transactions}")
             except Exception as e:
                 logging.error(f"Job {bet_addr58} - Can't retrieve transaction: {e}")
@@ -196,14 +206,14 @@ class Bet(TrxBetBotPlugin):
 
             found = False
             for trx in reversed(transactions["data"]):
-                value = trx["raw_data"]["contract"][0]["parameter"]["value"]
+                data = trx["contractData"]
 
                 # We check just for TRX
-                if "asset_name" not in value:
-                    trx_id = trx["txID"]
-                    from_hex = value["owner_address"]
-                    from_base58 = (Address().from_hex(from_hex)).decode("utf-8")
-                    trx_balance = value["amount"]
+                if "asset_name" not in data:
+                    trx_id = trx["hash"]
+                    from_base58 = data["owner_address"]
+                    from_hex = Address().to_hex(from_base58)
+                    trx_balance = data["amount"]
                     trx_amount = tron.fromSun(trx_balance)
 
                     # We only take the first transaction ...
