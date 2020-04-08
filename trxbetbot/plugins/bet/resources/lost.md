@@ -1,5 +1,5 @@
 More luck next time! 
 
 {{explorer}}  
-Winning Character: `{{last_char}}`  
-Your Characters: `{{chars}}`
+Your Characters: `{{chars}}`  
+Block Hash: `{{hash}}`

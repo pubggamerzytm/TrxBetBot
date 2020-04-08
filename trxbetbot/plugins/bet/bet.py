@@ -13,12 +13,9 @@ from trxbetbot.tronscan import Tronscan
 
 class Bet(TrxBetBotPlugin):
 
-    _MIN_BET = 2
     _WON_DIR = "won"
     _LOST_DIR = "lost"
     _VALID_CHARS = "0123456789abcdef"
-    _LEVERAGE = {1: 15.2, 2: 7.6, 3: 5.06, 4: 3.8, 5: 3.04, 6: 2.53, 7: 2.17, 8: 1.9,
-                 9: 1.68, 10: 1.52, 11: 1.38, 12: 1.26, 13: 1.16, 14: 1.08, 15: 1.01}
 
     tronscan = Tronscan()
 
@@ -45,26 +42,17 @@ class Bet(TrxBetBotPlugin):
             update.message.reply_text(self.get_usage(), parse_mode=ParseMode.MARKDOWN)
             return
 
-        chars = set(args[0])
-        count = len(chars)
+        choice = set(args[0])
+        nr_of_chars = self.config.get("nr_of_chars")
 
-        if not self.contains_all(chars):
-            msg = f"{emo.ERROR} You can only bet on one or more of these characters `{self._VALID_CHARS}`"
+        if not len(choice) == nr_of_chars:
+            msg = f"{emo.ERROR} You need to provide exactly {nr_of_chars} characters and not {len(choice)}"
             update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             return
 
-        # TODO: Test
-        # Bet has to be at least 2 characters
-        if count < self._MIN_BET:
-            msg = f"{emo.ERROR} Min characters to bet on is {self._MIN_BET}"
-            update.message.reply_text(msg)
-            return
-
-        # TODO: Test
-        # Bet can't exceed (VALID_CHARS - 1) characters
-        if count > (len(self._VALID_CHARS) - 1):
-            msg = f"{emo.ERROR} Max characters to bet on is {len(self._VALID_CHARS) - 1}"
-            update.message.reply_text(msg)
+        if not self.contains_all(choice):
+            msg = f"{emo.ERROR} You can only bet on one or more of these characters `{self._VALID_CHARS}`"
+            update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             return
 
         tron = Tron()
@@ -90,20 +78,21 @@ class Bet(TrxBetBotPlugin):
         sql = self.get_resource("insert_address.sql")
         self.execute_sql(sql, account.address.base58, account.private_key)
 
-        choice = "".join(sorted(chars))
-        chance = count / len(self._VALID_CHARS) * 100  # TODO: Change
-        leverage = self._LEVERAGE[len(chars)]
+        chance = 1
+        for i in range(nr_of_chars):
+            chance *= 1 / len(self._VALID_CHARS)
+        chance *= 100
+
+        leverage = self.config.get("leverage")
 
         min_trx = self.config.get("min_trx")
         max_trx = self.config.get("max_trx")
 
         msg = self.get_resource("betting.md")
-        msg = msg.replace("{{choice}}", choice)
-        msg = msg.replace("{{count}}", str(count))
-        msg = msg.replace("{{chance}}", str(chance))
+        msg = msg.replace("{{choice}}", str(choice))
+        msg = msg.replace("{{factor}}", str(leverage))
         msg = msg.replace("{{min}}", str(min_trx))
         msg = msg.replace("{{max}}", str(max_trx))
-        msg = msg.replace("{{leverage}}", str(leverage))
         logging.info(msg.replace("\n", ""))
 
         msg1 = update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
@@ -201,7 +190,7 @@ class Bet(TrxBetBotPlugin):
                 transactions = self.tronscan.get_transactions_for(bet_addr58)
                 logging.info(f"Job {bet_addr58} - Get Transactions: {transactions}")
             except Exception as e:
-                logging.error(f"Job {bet_addr58} - Can't retrieve transaction: {e}")
+                logging.error(f"Job {bet_addr58} - Can't retrieve transactions: {e}")
                 return
 
             found = False
@@ -319,8 +308,6 @@ class Bet(TrxBetBotPlugin):
 
             bet.bet_trx_block_hash = block["blockID"]
 
-        last_char = bet.bet_trx_block_hash[-1:]
-
         logging.info(f"Job {bet_addr58} - "
                      f"TXID: {bet.bet_trx_id} - "
                      f"Sender: {bet.usr_address} - "
@@ -329,24 +316,25 @@ class Bet(TrxBetBotPlugin):
 
         bot_addr = self.get_tron().default_address.hex
 
-        # If not already saved, save if bet was won or not
+        # Determine if bet was won or not.
+        # But only if not already saved
         if bet.bet_won is None:
-            bet.bet_won = last_char in choice
+            bet.bet_won = str(bet.bet_trx_block_hash).lower().endswith(choice.lower())
 
         block_link = f"[Block Explorer](https://tronscan.org/#/block/{bet.bet_trx_block})"
 
         # --------------- USER WON ---------------
         if bet.bet_won:
-            leverage = self._LEVERAGE[len(choice)]
+            leverage = self.config.get("leverage")
             winnings_sun = int(bet.usr_amount * leverage)
             winnings_trx = tron.fromSun(winnings_sun)
 
             bet.pay_amount = winnings_sun
 
             msg = self.get_resource("won.md")
+            msg = msg.replace("{{hash}}", bet.bet_trx_block_hash)
             msg = msg.replace("{{winnings}}", str(winnings_trx))
             msg = msg.replace("{{explorer}}", block_link)
-            msg = msg.replace("{{last_char}}", last_char)
             msg = msg.replace("{{chars}}", choice)
 
             log_msg = msg.replace("\n", "")
@@ -384,8 +372,8 @@ class Bet(TrxBetBotPlugin):
             bet.pay_trx_id = "-"
 
             msg = self.get_resource("lost.md")
+            msg = msg.replace("{{hash}}", bet.bet_trx_block_hash)
             msg = msg.replace("{{explorer}}", block_link)
-            msg = msg.replace("{{last_char}}", last_char)
             msg = msg.replace("{{chars}}", choice)
 
             log_msg = msg.replace("\n", "")

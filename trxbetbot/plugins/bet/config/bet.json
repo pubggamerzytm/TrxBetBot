@@ -2,6 +2,8 @@
     "handle": "bet",
     "category": "Gambling",
     "description": "Bet TRX on last char of block hash",
+    "nr_of_chars": 2,
+    "leverage": 50,
     "min_trx": 1,
     "max_trx": 2000,
     "check_start": 50,
