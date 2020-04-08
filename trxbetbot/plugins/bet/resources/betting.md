@@ -1,5 +1,6 @@
-You are betting that the hash of the block that contains your transaction ends with these characters: `{{choice}}`.
+You are betting on: `{{choice}}`  
+Winning Multiplicator: `x{{factor}}`
 
-If you win then the amount of TRX that you have sent to the address on the bottom will be multiplied by a factor of {{factor}}. 
+You are betting on the last {{chars}} characters of the block hash that contains your transaction.
 
-Send between {{min}} and {{max}} TRX to this address. Amount outside of allowed boundaries will be returned to you. 
+Send between {{min}} and {{max}} TRX to the following address:
