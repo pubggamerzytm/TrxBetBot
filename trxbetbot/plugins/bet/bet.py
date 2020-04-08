@@ -42,7 +42,7 @@ class Bet(TrxBetBotPlugin):
             update.message.reply_text(self.get_usage(), parse_mode=ParseMode.MARKDOWN)
             return
 
-        choice = set(args[0])
+        choice = args[0]
         nr_of_chars = self.config.get("nr_of_chars")
 
         if not len(choice) == nr_of_chars:
@@ -51,7 +51,7 @@ class Bet(TrxBetBotPlugin):
             return
 
         if not self.contains_all(choice):
-            msg = f"{emo.ERROR} You can only bet on one or more of these characters `{self._VALID_CHARS}`"
+            msg = f"{emo.ERROR} Your bet can only include these characters: `{self._VALID_CHARS}`"
             update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             return
 
@@ -89,7 +89,8 @@ class Bet(TrxBetBotPlugin):
         max_trx = self.config.get("max_trx")
 
         msg = self.get_resource("betting.md")
-        msg = msg.replace("{{choice}}", str(choice))
+        msg = msg.replace("{{choice}}", choice)
+        msg = msg.replace("{{chars}}", str(nr_of_chars))
         msg = msg.replace("{{factor}}", str(leverage))
         msg = msg.replace("{{min}}", str(min_trx))
         msg = msg.replace("{{max}}", str(max_trx))
