@@ -212,7 +212,8 @@ class TrxBetBot:
         if self.cfg.get("web", "use_web"):
             password = self.cfg.get("web", "password")
 
-            a = FlaskAppWrapper(__name__)
+            port = self.cfg.get("web", "port")
+            a = FlaskAppWrapper(__name__, port)
 
             a.add_endpoint(
                 endpoint='/',
