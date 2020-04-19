@@ -231,12 +231,6 @@ class TrxBetBot:
                 handler=self._get_address,
                 secret=password)
 
-            a.add_endpoint(
-                endpoint='/wallet',
-                endpoint_name='/wallet',
-                handler=self._get_bot_wallet,
-                secret=password)
-
             a.run()
 
         self.tgb.bot_idle()
