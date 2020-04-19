@@ -335,6 +335,8 @@ class Bet(TrxBetBotPlugin):
         if bet.bet_won is None:
             bet.bet_won = str(bet.bet_trx_block_hash).lower().endswith(choice.lower())
 
+        logging.info(f"Job {bet_addr58} - WON: {bet.bet_won} Choice: {choice} Hash: {bet.bet_trx_block_hash}")
+
         block_link = f"[Block Explorer](https://tronscan.org/#/block/{bet.bet_trx_block})"
 
         # --------------- USER WON ---------------
