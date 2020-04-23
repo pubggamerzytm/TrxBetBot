@@ -14,7 +14,7 @@ from trxbetbot.tronscan import Tronscan
 class Bet(TrxBetBotPlugin):
     _WON_DIR = "won"
     _LOST_DIR = "lost"
-    _VALID_CHARS = "0123456789abcdef"
+    _VALID_CHARS = "123456789abcdef"
 
     tronscan = Tronscan()
 
@@ -88,10 +88,12 @@ class Bet(TrxBetBotPlugin):
         sql = self.get_resource("insert_address.sql")
         self.execute_sql(sql, account.address.base58, account.private_key)
 
+        """ Calculate chance to win
         chance = 1
         for i in range(len(choice)):
             chance *= 1 / len(self._VALID_CHARS)
         chance *= 100
+        """
 
         leverage = preset["leverage"]
 
