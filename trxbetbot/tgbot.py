@@ -6,7 +6,6 @@ import trxbetbot.emoji as emo
 import trxbetbot.utils as utl
 import trxbetbot.constants as con
 
-
 from tronapi.main import Address
 from tronapi import Tron
 from importlib import reload

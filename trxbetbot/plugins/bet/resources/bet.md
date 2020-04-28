@@ -1,4 +1,2 @@
-
-Provide one or more characters that you want to bet on. You are betting on the block hash that includes your transaction and that it will end with the provided characters in sequence. Capitalization will not be considered.
-
-Example: `/{{handle}} 5f`
+/{{handle}} <0123456789abcdef>
+Provide the characters that you want to bet on as the argument to this command. Example: /{{handle}} 301ca. That would mean that you are betting that one of these characters is the last character of the block hash.

@@ -2,26 +2,14 @@
     "handle": "bet",
     "category": "Gambling",
     "description": "Bet TRX on last char of block hash",
-    "preset": {
-        "1": {
-            "min_trx": 50,
-            "max_trx": 100,
-            "leverage": 3
-        },
-        "2": {
-            "min_trx": 10,
-            "max_trx": 50,
-            "leverage": 50
-        },
-        "3": {
-            "min_trx": 1,
-            "max_trx": 10,
-            "leverage": 500
-        }
-    },
+    "min_trx": 1,
+    "max_trx": 100,
     "check_start": 50,
     "balance_check": 20,
     "stop_check": 1800,
     "clean_losses": 3600,
+    "bonus_chance": 15,
+    "bonus_trx": 5,
+    "bonus_privkey": "some_privkey",
     "loss_messages": []
 }

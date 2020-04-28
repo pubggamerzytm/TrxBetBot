@@ -12,9 +12,12 @@ from trxbetbot.tronscan import Tronscan
 
 
 class Bet(TrxBetBotPlugin):
+
     _WON_DIR = "won"
     _LOST_DIR = "lost"
     _VALID_CHARS = "123456789abcdef"
+    _LEVERAGE = {1: 14.4, 2: 7.2014, 3: 4.8453, 4: 3.6604, 5: 2.9273, 6: 2.4246, 7: 2.0803, 8: 1.8122,
+                 9: 1.6231, 10: 1.4562, 11: 1.3221, 12: 1.2131, 13: 1.1264, 14: 1.0523}
 
     tronscan = Tronscan()
 
@@ -37,32 +40,22 @@ class Bet(TrxBetBotPlugin):
     @TrxBetBotPlugin.threaded
     @TrxBetBotPlugin.send_typing
     def execute(self, bot, update, args):
-        logging.info(f"{emo.INFO} {update}")
-
         if len(args) != 1:
             update.message.reply_text(self.get_usage(), parse_mode=ParseMode.MARKDOWN)
             return
 
-        choice = args[0]
-        preset = self.config.get("preset")
+        chars = set(args[0])
+        count = len(chars)
 
-        if not str(len(choice)) in preset:
-            keys = ' or '.join(list(preset.keys()))
-            msg = f"{emo.ERROR} You need to provide {keys} characters and not {len(choice)}"
+        if not self.contains_all(chars):
+            msg = f"{emo.ERROR} You can only bet on one or more of these characters `{self._VALID_CHARS}`"
             update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             return
 
-        if not self.contains_all(choice):
-            msg = f"{emo.ERROR} Your bet can only include these characters: `{self._VALID_CHARS}`"
-            update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
-            return
-
-        preset = preset[str(len(choice))]
-        if "min_trx" not in preset or "max_trx" not in preset or "leverage" not in preset:
-            msg = f"{emo.ERROR} Wrong configuration in preset: {preset}"
-            update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
-            logging.error(msg)
-            self.notify(msg)
+        # Bet can't exceed (VALID_CHARS - 1) characters
+        if count > (len(self._VALID_CHARS) - 1):
+            msg = f"{emo.ERROR} Max characters to bet on is {len(self._VALID_CHARS) - 1}"
+            update.message.reply_text(msg)
             return
 
         tron = Tron()
@@ -88,24 +81,20 @@ class Bet(TrxBetBotPlugin):
         sql = self.get_resource("insert_address.sql")
         self.execute_sql(sql, account.address.base58, account.private_key)
 
-        """ Calculate chance to win
-        chance = 1
-        for i in range(len(choice)):
-            chance *= 1 / len(self._VALID_CHARS)
-        chance *= 100
-        """
+        choice = "".join(sorted(chars))
+        chance = count / len(self._VALID_CHARS) * 100  # TODO: Change
+        leverage = self._LEVERAGE[len(chars)]
 
-        leverage = preset["leverage"]
-
-        min_trx = preset["min_trx"]
-        max_trx = preset["max_trx"]
+        min_trx = self.config.get("min_trx")
+        max_trx = self.config.get("max_trx")
 
         msg = self.get_resource("betting.md")
         msg = msg.replace("{{choice}}", choice)
-        msg = msg.replace("{{chars}}", str(len(choice)))
-        msg = msg.replace("{{factor}}", str(leverage))
+        msg = msg.replace("{{count}}", str(count))
+        msg = msg.replace("{{chance}}", str(chance))
         msg = msg.replace("{{min}}", str(min_trx))
         msg = msg.replace("{{max}}", str(max_trx))
+        msg = msg.replace("{{factor}}", str(leverage))
         logging.info(msg.replace("\n", ""))
 
         msg1 = update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
@@ -121,7 +110,6 @@ class Bet(TrxBetBotPlugin):
         context = {
             "tron": tron,
             "choice": choice,
-            "preset": preset,
             "update": update,
             "start": time.time(),
             "msg1": msg1,
@@ -149,7 +137,6 @@ class Bet(TrxBetBotPlugin):
         tron = job.context["tron"]
         start = job.context["start"]
         choice = job.context["choice"]
-        preset = job.context["preset"]
         update = job.context["update"]
 
         bet_addr = tron.default_address
@@ -199,13 +186,13 @@ class Bet(TrxBetBotPlugin):
 
         logging.info(f"Job {bet_addr58} - Balance: {tron.fromSun(balance)} TRX")
 
-        # Check if we already found a saved transaction
+        # We already found a saved transaction
         if not bet.bet_trx_id:
             try:
                 transactions = self.tronscan.get_transactions_for(bet_addr58)
                 logging.info(f"Job {bet_addr58} - Get Transactions: {transactions}")
             except Exception as e:
-                logging.error(f"Job {bet_addr58} - Can't retrieve transactions: {e}")
+                logging.error(f"Job {bet_addr58} - Can't retrieve transaction: {e}")
                 return
 
             found = False
@@ -263,9 +250,8 @@ class Bet(TrxBetBotPlugin):
         from_hex = Address().to_hex(bet.usr_address)
 
         amo = float(tron.fromSun(bet.usr_amount))
-
-        min = preset["min_trx"]
-        max = preset["max_trx"]
+        min = self.config.get("min_trx")
+        max = self.config.get("max_trx")
 
         # Check if amount is out of MIN / MAX boundaries
         if amo > max or amo < min:
@@ -324,6 +310,8 @@ class Bet(TrxBetBotPlugin):
 
             bet.bet_trx_block_hash = block["blockID"]
 
+        last_char = bet.bet_trx_block_hash[-1:]
+
         logging.info(f"Job {bet_addr58} - "
                      f"TXID: {bet.bet_trx_id} - "
                      f"Sender: {bet.usr_address} - "
@@ -332,28 +320,68 @@ class Bet(TrxBetBotPlugin):
 
         bot_addr = self.get_tron().default_address.hex
 
-        # Determine if bet was won or not
-        # But only if not already saved
-        if bet.bet_won is None:
-            bet.bet_won = str(bet.bet_trx_block_hash).lower().endswith(choice.lower())
+        second_chance_win = False
 
-        logging.info(f"Job {bet_addr58} - WON: {bet.bet_won} Choice: {choice} Hash: {bet.bet_trx_block_hash}")
+        # If not already saved, save if bet was won or not
+        if bet.bet_won is None:
+            # WON
+            if last_char in choice:
+                bet.bet_won = True
+                logging.info(
+                    f"Job {bet_addr58} - "
+                    f"WON: {bet.bet_won} "
+                    f"Choice: {choice} "
+                    f"Hash: {bet.bet_trx_block_hash}")
+            # LOST
+            else:
+                logging.info(
+                    f"Job {bet_addr58} - "
+                    f"WON: False "
+                    f"Choice: {choice} "
+                    f"Hash: {bet.bet_trx_block_hash}")
+                # Add chance to still win even if you lost (aka bonus)
+                bonus_chance = self.config.get("bonus_chance") / 100
+                # SECOND CHANCE WON
+                if random.random() < bonus_chance:
+                    second_chance_win = True
+                    bet.bet_won = True
+                    logging.info(
+                        f"Job {bet_addr58} - "
+                        f"SECOND CHANCE WON: {bet.bet_won} "
+                        f"Choice: {choice} "
+                        f"Hash: {bet.bet_trx_block_hash}")
+                # SECOND CHANCE LOST
+                else:
+                    bet.bet_won = False
+                    logging.info(
+                        f"Job {bet_addr58} - "
+                        f"SECOND CHANCE WON: {bet.bet_won} "
+                        f"Choice: {choice} "
+                        f"Hash: {bet.bet_trx_block_hash}")
 
         block_link = f"[Block Explorer](https://tronscan.org/#/block/{bet.bet_trx_block})"
 
         # --------------- USER WON ---------------
         if bet.bet_won:
-            leverage = preset["leverage"]
-            winnings_sun = int(bet.usr_amount * leverage)
-            winnings_trx = tron.fromSun(winnings_sun)
+            if second_chance_win:
+                winnings_trx = self.config.get("bonus_trx")
+                winnings_sun = tron.toSun(winnings_trx)
+
+                msg = self.get_resource("won_second.md")
+            else:
+                leverage = self._LEVERAGE[len(choice)]
+                winnings_sun = int(bet.usr_amount * leverage)
+                winnings_trx = tron.fromSun(winnings_sun)
+
+                msg = self.get_resource("won.md")
 
             bet.pay_amount = winnings_sun
 
-            msg = self.get_resource("won.md")
-            msg = msg.replace("{{hash}}", bet.bet_trx_block_hash)
             msg = msg.replace("{{winnings}}", str(winnings_trx))
             msg = msg.replace("{{explorer}}", block_link)
+            msg = msg.replace("{{last_char}}", last_char)
             msg = msg.replace("{{chars}}", choice)
+            msg = msg.replace("{{hash}}", bet.bet_trx_block_hash)
 
             log_msg = msg.replace("\n", "")
             logging.info(f"Job {bet_addr58} - MSG: {log_msg}")
@@ -361,14 +389,25 @@ class Bet(TrxBetBotPlugin):
             # Pay winning amount if not done yet
             if not bet.pay_trx_id:
                 try:
-                    # Send funds from bot address to user address
-                    send_user = self.get_tron().trx.send(from_hex, float(winnings_trx))
+                    if second_chance_win:
+                        params = dict()
+                        params["private_key"] = self.config.get("bonus_privkey")
+                        params["default_address"] = Address.from_private_key(params["private_key"])["base58"]
+
+                        bonus_tron = Tron(**params)
+                        send_user = bonus_tron.trx.send(from_hex, float(winnings_trx))
+                    else:
+                        # Send funds from bot address to user address
+                        send_user = self.get_tron().trx.send(from_hex, float(winnings_trx))
 
                     # An error was returned
                     if "code" in send_user and "message" in send_user:
                         raise Exception(send_user["message"])
 
-                    logging.info(f"Job {bet_addr58} - Send from Bot to User: {send_user}")
+                    if second_chance_win:
+                        logging.info(f"Job {bet_addr58} - Send from Bonus to User: {send_user}")
+                    else:
+                        logging.info(f"Job {bet_addr58} - Send from Bot to User: {send_user}")
                 except Exception as e:
                     logging.error(f"Job {bet_addr58} - Can't send from Bot to User: {e}")
 
@@ -390,9 +429,10 @@ class Bet(TrxBetBotPlugin):
             bet.pay_trx_id = "-"
 
             msg = self.get_resource("lost.md")
-            msg = msg.replace("{{hash}}", bet.bet_trx_block_hash)
             msg = msg.replace("{{explorer}}", block_link)
+            msg = msg.replace("{{last_char}}", last_char)
             msg = msg.replace("{{chars}}", choice)
+            msg = msg.replace("{{hash}}", bet.bet_trx_block_hash)
 
             log_msg = msg.replace("\n", "")
             logging.info(f"Job {bet_addr58} - MSG: {log_msg}")
