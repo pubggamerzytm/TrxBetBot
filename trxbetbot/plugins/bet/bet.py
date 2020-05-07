@@ -15,6 +15,7 @@ class Bet(TrxBetBotPlugin):
 
     _WON_DIR = "won"
     _LOST_DIR = "lost"
+    _SECOND_CHANCE_DIR = "won_second"
     _VALID_CHARS = "123456789abcdef"
     _LEVERAGE = {1: 14.4, 2: 7.2014, 3: 4.8453, 4: 3.6604, 5: 2.9273, 6: 2.4246, 7: 2.0803, 8: 1.8122,
                  9: 1.6231, 10: 1.4562, 11: 1.3221, 12: 1.2131, 13: 1.1264, 14: 1.0523}
@@ -321,6 +322,7 @@ class Bet(TrxBetBotPlugin):
         bot_addr = self.get_tron().default_address.hex
 
         second_chance_win = False
+        second_chance_trx = 0
 
         # If not already saved, save if bet was won or not
         if bet.bet_won is None:
@@ -339,19 +341,31 @@ class Bet(TrxBetBotPlugin):
                     f"WON: False "
                     f"Choice: {choice} "
                     f"Hash: {bet.bet_trx_block_hash}")
-                # Add chance to still win even if you lost (aka bonus)
-                bonus_chance = self.config.get("bonus_chance") / 100
-                # SECOND CHANCE WON
-                if random.random() < bonus_chance:
-                    second_chance_win = True
-                    bet.bet_won = True
-                    logging.info(
-                        f"Job {bet_addr58} - "
-                        f"SECOND CHANCE WON: {bet.bet_won} "
-                        f"Choice: {choice} "
-                        f"Hash: {bet.bet_trx_block_hash}")
+
+                # Chance to still win even if you lost (aka bonus)
+                bonuses = self.config.get("bonus_chances")
+                bonuses = sorted(bonuses, key=lambda k: k['chance'])
+
+                random_number = random.random()
+
+                for bonus in bonuses:
+                    # SECOND CHANCE WON
+                    if random_number < (bonus["chance"] / 100):
+                        second_chance_trx = bonus["trx"]
+                        second_chance_win = True
+                        bet.bet_won = True
+                        logging.info(
+                            f"Job {bet_addr58} - "
+                            f"SECOND CHANCE WON: {bet.bet_won} "
+                            f"Choice: {choice} "
+                            f"Hash: {bet.bet_trx_block_hash} "
+                            f"Second chance probability: {bonus['chance']}% "
+                            f"Random number: {random_number * 100} "
+                            f"Won amount: {second_chance_trx} TRX")
+                        break
+
                 # SECOND CHANCE LOST
-                else:
+                if not second_chance_win:
                     bet.bet_won = False
                     logging.info(
                         f"Job {bet_addr58} - "
@@ -364,7 +378,7 @@ class Bet(TrxBetBotPlugin):
         # --------------- USER WON ---------------
         if bet.bet_won:
             if second_chance_win:
-                winnings_trx = self.config.get("bonus_trx")
+                winnings_trx = second_chance_trx
                 winnings_sun = tron.toSun(winnings_trx)
 
                 msg = self.get_resource("won_second.md")
@@ -421,7 +435,10 @@ class Bet(TrxBetBotPlugin):
                 bet.pay_trx_id = send_user["transaction"]["txID"]
 
             # Determine path for winning animation
-            image_path = os.path.join(self.get_res_path(), self._WON_DIR)
+            if second_chance_win:
+                image_path = os.path.join(self.get_res_path(), self._SECOND_CHANCE_DIR, str(second_chance_trx))
+            else:
+                image_path = os.path.join(self.get_res_path(), self._WON_DIR)
 
         # --------------- BOT WON ---------------
         else:
@@ -492,6 +509,16 @@ class Bet(TrxBetBotPlugin):
 
         # Remove messages after betting address isn't valid anymore
         self.remove_messages(bot, msg1, msg2, bet_addr58)
+
+        # Inform admins that user won with second chance
+        if second_chance_win:
+            if update.effective_user.username:
+                u = f"@{update.effective_user.username}"
+            else:
+                u = update.effective_user.first_name
+
+            msg = f"User {u} just won {second_chance_trx} TRX by second chance"
+            self.notify(msg)
 
         logging.info(f"Job {bet_addr58} - Ending job")
 
