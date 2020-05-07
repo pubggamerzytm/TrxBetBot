@@ -3,20 +3,30 @@
     "category": "Gambling",
     "description": "Bet TRX on ending chars in sequenced order",
     "preset": {
-        "1": {
-            "min_trx": 50,
-            "max_trx": 100,
-            "leverage": 2.5
-        },
         "2": {
-            "min_trx": 10,
-            "max_trx": 50,
+            "min_trx": 2,
+            "max_trx": 1000,
             "leverage": 50
         },
         "3": {
-            "min_trx": 1,
-            "max_trx": 10,
-            "leverage": 500
+            "min_trx": 2,
+            "max_trx": 250,
+            "leverage": 250
+        },
+        "4": {
+            "min_trx": 2,
+            "max_trx": 300,
+            "leverage": 777
+        },
+        "5": {
+            "min_trx": 2,
+            "max_trx": 100,
+            "leverage": 5000
+        },
+        "6": {
+            "min_trx": 2,
+            "max_trx": 50,
+            "leverage": 10000
         }
     },
     "check_start": 50,
