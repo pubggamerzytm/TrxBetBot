@@ -16,7 +16,7 @@ class Bet(TrxBetBotPlugin):
     _WON_DIR = "won"
     _LOST_DIR = "lost"
     _SECOND_CHANCE_DIR = "won_second"
-    _VALID_CHARS = "123456789abcdef"
+    _VALID_CHARS = "0123456789abcdef"
     _LEVERAGE = {1: 14.4, 2: 7.2014, 3: 4.8453, 4: 3.6604, 5: 2.9273, 6: 2.4246, 7: 2.0803, 8: 1.8122,
                  9: 1.6231, 10: 1.4562, 11: 1.3221, 12: 1.2131, 13: 1.1264, 14: 1.0523}
 
@@ -45,7 +45,12 @@ class Bet(TrxBetBotPlugin):
             update.message.reply_text(self.get_usage(), parse_mode=ParseMode.MARKDOWN)
             return
 
-        chars = set(args[0])
+        if "".join(args[0]) == "0":
+            msg = f"{emo.ERROR} The character '0' is not a valid character that you can bet on"
+            update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
+            return
+
+        chars = set(args[0].replace("0", ""))
         count = len(chars)
 
         if not self.contains_all(chars):

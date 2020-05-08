@@ -14,7 +14,7 @@ from trxbetbot.tronscan import Tronscan
 class Win(TrxBetBotPlugin):
     _WON_DIR = "won"
     _LOST_DIR = "lost"
-    _VALID_CHARS = "123456789abcdef"
+    _VALID_CHARS = "0123456789abcdef"
 
     tronscan = Tronscan()
 
@@ -43,7 +43,12 @@ class Win(TrxBetBotPlugin):
             update.message.reply_text(self.get_usage(), parse_mode=ParseMode.MARKDOWN)
             return
 
-        choice = args[0]
+        if "".join(args) == "0":
+            msg = f"{emo.ERROR} The character '0' is not a valid character that you can bet on"
+            update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
+            return
+
+        choice = args[0].replace("0", "")
         preset = self.config.get("preset")
 
         if not str(len(choice)) in preset:
