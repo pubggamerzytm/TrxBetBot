@@ -7,7 +7,7 @@
     "check_start": 50,
     "balance_check": 20,
     "stop_check": 1800,
-    "clean_losses": 3600,
+    "clean_losses": 1800,
     "bonus_chances": [
         {"chance": 0.0004, "trx": 1},
         {"chance": 0.002, "trx": 5},
