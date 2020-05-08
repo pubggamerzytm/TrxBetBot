@@ -52,8 +52,8 @@ class Win(TrxBetBotPlugin):
         preset = self.config.get("preset")
 
         if not str(len(choice)) in preset:
-            keys = ' or '.join(list(preset.keys()))
-            msg = f"{emo.ERROR} You need to provide {keys} characters and not {len(choice)}"
+            # keys = ' or '.join(list(preset.keys()))
+            msg = f"{emo.ERROR} You need to provide 1-6 characters and not {len(choice)}"
             update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             return
 

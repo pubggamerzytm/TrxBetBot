@@ -58,9 +58,9 @@ class Bet(TrxBetBotPlugin):
             update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             return
 
-        # Bet can't exceed (VALID_CHARS - 1) characters
-        if count > (len(self._VALID_CHARS) - 1):
-            msg = f"{emo.ERROR} Max characters to bet on is {len(self._VALID_CHARS) - 1}"
+        # Bet can't exceed (VALID_CHARS - 2) characters ('0' is excluded)
+        if count > (len(self._VALID_CHARS) - 2):
+            msg = f"{emo.ERROR} You need to provide 1-14 characters and not {count}"
             update.message.reply_text(msg)
             return
 
