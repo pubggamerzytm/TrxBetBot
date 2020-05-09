@@ -1,5 +1,6 @@
 {
     "handle": "balance",
     "category": "Wallet",
-    "description": "Show balance of your TRX wallet"
+    "description": "Show balance of your TRX wallet",
+    "remove_after": 15
 }

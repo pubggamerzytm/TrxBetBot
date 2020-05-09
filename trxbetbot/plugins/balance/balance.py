@@ -1,5 +1,6 @@
 from tronapi import Tron
 from telegram import ParseMode
+from datetime import datetime, timedelta
 from trxbetbot.plugin import TrxBetBotPlugin
 
 
@@ -30,4 +31,20 @@ class Balance(TrxBetBotPlugin):
         amount = tron.fromSun(balance)
 
         msg = f"Balance: `{amount}` TRX"
-        update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
+        message = update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
+
+        remove_time = self.config.get("remove_after")
+
+        self.repeat_job(
+            self._remove_msg,
+            0,
+            datetime.now() + timedelta(seconds=remove_time),
+            context=f"{message.chat_id}_{message.message_id}")
+
+    def _remove_msg(self, bot, job):
+        param_lst = job.context.split("_")
+        chat_id = param_lst[0]
+        msg_id = param_lst[1]
+
+        bot.delete_message(chat_id=chat_id, message_id=msg_id)
+        job.schedule_removal()

@@ -14,7 +14,7 @@ from trxbetbot.tronscan import Tronscan
 class Win(TrxBetBotPlugin):
     _WON_DIR = "won"
     _LOST_DIR = "lost"
-    _VALID_CHARS = "0123456789abcdef"
+    _VALID_CHARS = "123456789abcdef"
 
     tronscan = Tronscan()
 
@@ -43,22 +43,19 @@ class Win(TrxBetBotPlugin):
             update.message.reply_text(self.get_usage(), parse_mode=ParseMode.MARKDOWN)
             return
 
-        if "".join(args) == "0":
-            msg = f"{emo.ERROR} The character '0' is not a valid character that you can bet on"
+        choice = "".join(self.remove_unwanted(args[0]))
+        preset = self.config.get("preset")
+
+        # Check if user provided any valid characters
+        if len(choice) == 0:
+            msg = f"{emo.ERROR} You did not provide any valid characters to bet on. " \
+                  f"Allowed are: `{self._VALID_CHARS}`"
             update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             return
-
-        choice = args[0].replace("0", "")
-        preset = self.config.get("preset")
 
         if not str(len(choice)) in preset:
             # keys = ' or '.join(list(preset.keys()))
-            msg = f"{emo.ERROR} You need to provide 1-6 characters and not {len(choice)}"
-            update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
-            return
-
-        if not self.contains_all(choice):
-            msg = f"{emo.ERROR} Your bet can only include these characters: `{self._VALID_CHARS}`"
+            msg = f"{emo.ERROR} You need to provide 1-{len(preset)} characters and not {len(choice)}"
             update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             return
 
@@ -149,6 +146,9 @@ class Win(TrxBetBotPlugin):
     def contains_all(self, chars):
         """ Check if characters in 'chars' are all valid characters """
         return 0 not in [c in self._VALID_CHARS for c in chars]
+
+    def remove_unwanted(self, chars):
+        return [i for i in chars if i in self._VALID_CHARS]
 
     def scan_balance(self, bot, job):
         tron = job.context["tron"]

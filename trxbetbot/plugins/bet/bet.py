@@ -16,7 +16,7 @@ class Bet(TrxBetBotPlugin):
     _WON_DIR = "won"
     _LOST_DIR = "lost"
     _SECOND_CHANCE_DIR = "won_second"
-    _VALID_CHARS = "0123456789abcdef"
+    _VALID_CHARS = "123456789abcdef"
     _LEVERAGE = {1: 14.4, 2: 7.2014, 3: 4.8453, 4: 3.6604, 5: 2.9273, 6: 2.4246, 7: 2.0803, 8: 1.8122,
                  9: 1.6231, 10: 1.4562, 11: 1.3221, 12: 1.2131, 13: 1.1264, 14: 1.0523}
 
@@ -45,22 +45,19 @@ class Bet(TrxBetBotPlugin):
             update.message.reply_text(self.get_usage(), parse_mode=ParseMode.MARKDOWN)
             return
 
-        if "".join(args[0]) == "0":
-            msg = f"{emo.ERROR} The character '0' is not a valid character that you can bet on"
-            update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
-            return
-
-        chars = set(args[0].replace("0", ""))
+        chars = set(self.remove_unwanted(args[0]))
         count = len(chars)
 
-        if not self.contains_all(chars):
-            msg = f"{emo.ERROR} You can only bet on one or more of these characters `{self._VALID_CHARS}`"
+        # Check if user provided any valid characters
+        if count == 0:
+            msg = f"{emo.ERROR} You did not provide any valid characters to bet on. " \
+                  f"Allowed are: `{self._VALID_CHARS}`"
             update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             return
 
-        # Bet can't exceed (VALID_CHARS - 2) characters ('0' is excluded)
-        if count > (len(self._VALID_CHARS) - 2):
-            msg = f"{emo.ERROR} You need to provide 1-14 characters and not {count}"
+        # Bet need to be smaller than allowed characters (at least be one)
+        if count >= (len(self._VALID_CHARS)):
+            msg = f"{emo.ERROR} You need to provide 1-{len(self._VALID_CHARS)-1} characters and not {count}"
             update.message.reply_text(msg)
             return
 
@@ -88,7 +85,6 @@ class Bet(TrxBetBotPlugin):
         self.execute_sql(sql, account.address.base58, account.private_key)
 
         choice = "".join(sorted(chars))
-        chance = count / len(self._VALID_CHARS) * 100  # TODO: Change
         leverage = self._LEVERAGE[len(chars)]
 
         min_trx = self.config.get("min_trx")
@@ -97,7 +93,6 @@ class Bet(TrxBetBotPlugin):
         msg = self.get_resource("betting.md")
         msg = msg.replace("{{choice}}", choice)
         msg = msg.replace("{{count}}", str(count))
-        msg = msg.replace("{{chance}}", str(chance))
         msg = msg.replace("{{min}}", str(min_trx))
         msg = msg.replace("{{max}}", str(max_trx))
         msg = msg.replace("{{factor}}", str(leverage))
@@ -138,6 +133,9 @@ class Bet(TrxBetBotPlugin):
     def contains_all(self, chars):
         """ Check if characters in 'chars' are all valid characters """
         return 0 not in [c in self._VALID_CHARS for c in chars]
+
+    def remove_unwanted(self, chars):
+        return [i for i in chars if i in self._VALID_CHARS]
 
     def scan_balance(self, bot, job):
         tron = job.context["tron"]
