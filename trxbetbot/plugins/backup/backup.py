@@ -55,7 +55,15 @@ class Backup(TrxBetBotPlugin):
                     write_path = os.path.relpath(path, base_dir)
                     zf.write(path, write_path)
 
-        bot.send_document(
-            chat_id=update.effective_user.id,
-            caption=f"{emo.DONE} Backup created",
-            document=open(os.path.join(os.getcwd(), filename), 'rb'))
+        filepath = os.path.join(os.getcwd(), filename)
+
+        try:
+            bot.send_document(
+                chat_id=update.effective_user.id,
+                caption=f"{emo.DONE} Backup created",
+                document=open(filepath, 'rb'))
+        except Exception as e:
+            if os.path.exists(filepath):
+                msg = f"{emo.DONE} Backup successfully created but not possible to upload: {e}"
+                update.message.reply_text(msg)
+                return
