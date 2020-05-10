@@ -6,7 +6,7 @@
         "notify_on_error": true
     },
     "telegram": {
-        "read_timeout": 30,
+        "read_timeout": 240,
         "connect_timeout": 30
     },
     "webhook": {
