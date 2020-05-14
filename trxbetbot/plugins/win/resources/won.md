@@ -1,5 +1,6 @@
-*YOU WON!* Total: `{{winnings}}` TRX
+*YOU WON!*🤑 Total: `{{winnings}}` TRX
 
 {{explorer}}  
-Your Characters: `{{chars}}`  
+*Your Characters*: `{{chars}}`  
+*Winning Characters*: `{{charswin}}`  
 Block Hash: `{{hash}}`

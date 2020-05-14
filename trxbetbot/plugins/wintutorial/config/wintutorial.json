@@ -1,7 +1,7 @@
 {
-    "handle": "quickhelp",
+    "handle": "wintutorial",
     "category": "Tutorials",
-    "description": "Short overview",
+    "description": "How-To for HashLotto Jackpot",
     "public_remove_after": 60,
     "private_remove_after": 300
 }

@@ -1,5 +1,7 @@
 {
     "handle": "multiplier",
     "category": "Gambling",
-    "description": "View multipliers for /bet and /win"
+    "description": "View multipliers for /bet and /win",
+    "public_remove_after": 60,
+    "private_remove_after": 300
 }

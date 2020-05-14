@@ -12,6 +12,9 @@ from trxbetbot.tronscan import Tronscan
 
 
 class Win(TrxBetBotPlugin):
+
+    AUTOWIN = "autowin"
+
     _WON_DIR = "won"
     _LOST_DIR = "lost"
     _VALID_CHARS = "123456789abcdef"
@@ -67,6 +70,8 @@ class Win(TrxBetBotPlugin):
             self.notify(msg)
             return
 
+        logging.info(f"Update: {update}")
+
         tron = Tron()
         account = tron.create_account
         tron.private_key = account.private_key
@@ -102,7 +107,11 @@ class Win(TrxBetBotPlugin):
         min_trx = preset["min_trx"]
         max_trx = preset["max_trx"]
 
-        msg = self.get_resource("betting.md")
+        if self.is_autowin(update):
+            msg = self.get_resource("betting_autowin.md")
+        else:
+            msg = self.get_resource("betting.md")
+
         msg = msg.replace("{{choice}}", choice)
         msg = msg.replace("{{chars}}", str(len(choice)))
         msg = msg.replace("{{factor}}", str(leverage))
@@ -111,7 +120,13 @@ class Win(TrxBetBotPlugin):
         logging.info(msg.replace("\n", ""))
 
         msg1 = update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
-        msg2 = update.message.reply_text(f"`{account.address.base58}`", parse_mode=ParseMode.MARKDOWN)
+
+        if self.is_autowin(update):
+            msg = f"{emo.WAIT} Auto-Sending TRX..."
+        else:
+            msg = f"`{account.address.base58}`"
+
+        msg2 = update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
 
         # Save bet details to database
         sql = self.get_resource("insert_bet.sql")
@@ -133,6 +148,63 @@ class Win(TrxBetBotPlugin):
         self.repeat_job(self.scan_balance, check, first=first, context=context)
 
         logging.info(f"Initiated repeating job for {account.address.base58}")
+
+        # --- Start auto-bet logic - send TRX from user wallet to generated wallet ---
+
+        if self.is_autowin(update):
+            logging.info("Bet is an auto-win")
+
+            # Get users wallet to send bet TRX from
+            sql = self.get_global_resource("select_address.sql")
+            res = self.execute_global_sql(sql, update.effective_user.id)
+
+            if not res["success"]:
+                msg = f"{emo.ERROR} Autowin stopped. Your TRX wallet could not be determined."
+                update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
+                self.get_job(update.effective_user.id).schedule_removal()
+                logging.error(res)
+                return
+
+            logging.info(f"Users wallet used for auto-win: {res['data']}")
+
+            # Users existing wallet used for auto-bet
+            from_user = Tron()
+            from_user.private_key = res["data"][0][2]
+            from_user.default_address = res["data"][0][1]
+
+            sql = self.get_resource("select_autowin.sql", plugin="autowin")
+            res = self.execute_sql(sql, update.effective_user.id, plugin="autowin")
+
+            if not res["success"]:
+                msg = f"{emo.ERROR} Auto-win stopped. Couldn't read data from DB."
+                update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
+                self.get_job(update.effective_user.id).schedule_removal()
+                logging.error(res)
+                return
+
+            bet_amount = float(res["data"][0][2])
+
+            # Send determined bet amount from user wallet to generated wallet
+            send = from_user.trx.send(tron.default_address.hex, bet_amount)
+            logging.info(f"Autowin {bet_amount} TRX - {send}")
+
+            if "code" in send and "message" in send:
+                msg = f"{emo.ERROR} Autowin stopped. Not possible to send {bet_amount} TRX: {send['message']}"
+                update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
+                self.get_job(update.effective_user.id).schedule_removal()
+                logging.error(msg)
+                return
+
+            msg = f"{emo.DONE} Successfully sent `{bet_amount}` TRX to `{account.address.base58}`"
+            msg2.edit_text(msg, parse_mode=ParseMode.MARKDOWN)
+            logging.info(msg)
+
+    def is_autowin(self, update):
+        caption = update.effective_message.caption
+        if caption and caption == self.AUTOWIN:
+            return True
+        else:
+            return False
 
     def remove_losses(self, bot, job):
         for msg in self.config.get("loss_messages"):
@@ -359,6 +431,7 @@ class Win(TrxBetBotPlugin):
             msg = msg.replace("{{winnings}}", str(winnings_trx))
             msg = msg.replace("{{explorer}}", block_link)
             msg = msg.replace("{{chars}}", choice)
+            msg = msg.replace("{{charswin}}", bet.bet_trx_block_hash[-len(choice):])
 
             log_msg = msg.replace("\n", "")
             logging.info(f"Job {bet_addr58} - MSG: {log_msg}")
@@ -398,6 +471,7 @@ class Win(TrxBetBotPlugin):
             msg = msg.replace("{{hash}}", bet.bet_trx_block_hash)
             msg = msg.replace("{{explorer}}", block_link)
             msg = msg.replace("{{chars}}", choice)
+            msg = msg.replace("{{charswin}}", bet.bet_trx_block_hash[-len(choice):])
 
             log_msg = msg.replace("\n", "")
             logging.info(f"Job {bet_addr58} - MSG: {log_msg}")

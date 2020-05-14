@@ -1,5 +1,23 @@
 *Multipliers for* `/bet`  
-{{multibet}}
+1 character: x14.4
+2 character: x7.2014
+3 character: x4.8453
+4 character: x3.6604
+5 character: x2.9273
+6 character: x2.4246
+7 character: x2.0803
+8 character: x1.8122
+9 character: x1.6231
+10 character: x1.4562
+11 character: x1.3221
+12 character: x1.2131
+13 character: x1.1264
+14 character: x1.0523
 
 *Multipliers for* `/win`  
-{{multiwin}}
+1 character: x14.4
+2 character: x50
+3 character: x250
+4 character: x777
+5 character: x5000
+6 character: x10000

@@ -1,5 +1,6 @@
-More luck next time! 
+More luck next time! 🍀
 
 {{explorer}}  
-Your Characters: `{{chars}}`  
+*Your Characters*: `{{chars}}`  
+*Winning Characters*: `{{charswin}}`  
 Block Hash: `{{hash}}`

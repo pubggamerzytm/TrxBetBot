@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from trxbetbot.plugin import TrxBetBotPlugin
 
 
-class Quickhelp(TrxBetBotPlugin):
+class Wintutorial(TrxBetBotPlugin):
 
     INFO_FILE = "info.md"
 

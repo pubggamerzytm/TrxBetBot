@@ -1,0 +1,7 @@
+{
+    "handle": "autowin",
+    "description": "Automatically place a bet for /win",
+    "category": "Automatic Betting",
+    "private": true,
+    "interval": 120
+}

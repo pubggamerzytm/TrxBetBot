@@ -41,12 +41,17 @@ class TrxBetBotPlugin:
         msg = f"Method '{method}' not implemented for plugin '{self.get_name()}'"
         logging.warning(msg)
 
-    def get_usage(self):
+    def get_usage(self, replace: dict = None):
         """ Return how to use the command """
         usage = self.get_resource(f"{self.get_name()}.md")
 
         if usage:
             usage = usage.replace("{{handle}}", self.get_handle())
+
+            if replace:
+                for placeholder, value in replace.items():
+                    usage = usage.replace(placeholder, str(value))
+
             return usage
 
         return None
@@ -83,13 +88,13 @@ class TrxBetBotPlugin:
 
         return jobs[0]
 
-    def repeat_job(self, callback, interval, first=0, context=None):
+    def repeat_job(self, callback, interval, first=0, context=None, name=None):
         """ Logic that gets executed periodically """
         self._tgb.job_queue.run_repeating(
             callback,
             interval,
             first=first,
-            name=self.get_name(),
+            name=name if name else self.get_name(),
             context=context)
 
     def add_handler(self, handler, group=0):

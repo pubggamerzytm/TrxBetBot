@@ -1,0 +1,7 @@
+{
+    "handle": "autobet",
+    "description": "Automatically place a bet for /bet",
+    "category": "Automatic Betting",
+    "private": true,
+    "interval": 120
+}

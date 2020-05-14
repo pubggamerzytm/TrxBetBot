@@ -3,8 +3,9 @@ import trxbetbot.emoji as emo
 import trxbetbot.constants as con
 
 from tronapi import Tron
-from telegram import ParseMode
+from telegram import ParseMode, Chat
 from trx_utils import is_address
+from datetime import datetime, timedelta
 from trxbetbot.plugin import TrxBetBotPlugin
 
 
@@ -73,6 +74,8 @@ class Send(TrxBetBotPlugin):
             update.message.reply_text(msg)
             return
 
+        message = None
+
         try:
             send = tron.trx.send(address, float(amount))
 
@@ -86,7 +89,7 @@ class Send(TrxBetBotPlugin):
             msg = f"{emo.DONE} Successfully sent `{amount}` TRX. [View " \
                   f"on Block Explorer]({explorer_link}) (wait ~1 minute)"
 
-            update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN, disable_web_page_preview=True)
+            message = update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN, disable_web_page_preview=True)
 
             logging.info(f"Sent {amount} TRX from {data[0][1]} to {address} - {update}")
 
@@ -98,3 +101,23 @@ class Send(TrxBetBotPlugin):
                 update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             else:
                 update.message.reply_text(f"{emo.ERROR} {repr(e)}")
+
+        if bot.get_chat(update.message.chat_id).type == Chat.PRIVATE:
+            remove_time = self.config.get("private_remove_after")
+        else:
+            remove_time = self.config.get("public_remove_after")
+
+        if message:
+            self.repeat_job(
+                self._remove_msg,
+                0,
+                datetime.now() + timedelta(seconds=remove_time),
+                context=f"{message.chat_id}_{message.message_id}")
+
+    def _remove_msg(self, bot, job):
+        param_lst = job.context.split("_")
+        chat_id = param_lst[0]
+        msg_id = param_lst[1]
+
+        bot.delete_message(chat_id=chat_id, message_id=msg_id)
+        job.schedule_removal()
