@@ -48,7 +48,7 @@ class Autobet(TrxBetBotPlugin):
                 sql = self.get_resource("delete_autobet.sql")
                 self.execute_sql(sql, update.effective_user.id)
 
-                job = self.get_job(name=self.get_name())
+                job = self.get_job(name=usr_id)
                 if job: job.schedule_removal()
 
                 msg = f"{emo.INFO} Stopped automatic betting"
