@@ -1,0 +1,1 @@
+Put something in file `international/resources/info.md`

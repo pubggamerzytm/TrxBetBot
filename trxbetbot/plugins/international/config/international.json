@@ -1,0 +1,7 @@
+{
+    "handle": "international",
+    "category": "Tutorials",
+    "description": "International help",
+    "public_remove_after": 60,
+    "private_remove_after": 300
+}
