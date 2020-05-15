@@ -85,6 +85,10 @@ class Autobet(TrxBetBotPlugin):
         if self.execute_sql(sql, usr_id)["data"][0][0] == 1:
             sql = self.get_resource("update_autobet.sql")
             self.execute_sql(sql, bet_chars, bet_amount, updt, usr_id)
+
+            msg = f"{emo.INFO} Auto-Betting data for {self.get_name()} updated..."
+            update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
+            return
         else:
             sql = self.get_resource("insert_autobet.sql")
             self.execute_sql(sql, usr_id, bet_chars, bet_amount, updt)
