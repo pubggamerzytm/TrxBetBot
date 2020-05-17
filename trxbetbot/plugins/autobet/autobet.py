@@ -53,7 +53,7 @@ class Autobet(TrxBetBotPlugin):
                 sql = self.get_resource("delete_autobet.sql")
                 self.execute_sql(sql, update.effective_user.id)
 
-                job = self.get_job(name=self.get_name() + usr_id)
+                job = self.get_job(name=self.get_name() + str(usr_id))
                 if job: job.schedule_removal()
 
                 msg = f"{emo.INFO} Stopped automatic betting"
@@ -113,7 +113,7 @@ class Autobet(TrxBetBotPlugin):
             self.auto_bet,
             self.config.get("interval"),
             context=context,
-            name=self.get_name() + usr_id)
+            name=self.get_name() + str(usr_id))
 
     def auto_bet(self, bot, job):
         update = job.context["update"]
