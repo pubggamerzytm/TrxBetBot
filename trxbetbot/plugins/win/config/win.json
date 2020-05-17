@@ -9,7 +9,7 @@
             "leverage": 14.4
         },
         "2": {
-            "min_trx": 0.01,
+            "min_trx": 5,
             "max_trx": 1000,
             "leverage": 50
         },
@@ -37,15 +37,6 @@
     "check_start": 50,
     "balance_check": 20,
     "stop_check": 1800,
-    "clean_losses": 3600,
-    "loss_messages": [
-        {
-            "chat_id": 134166731,
-            "msg_id": 3831
-        },
-        {
-            "chat_id": 134166731,
-            "msg_id": 3864
-        }
-    ]
+    "public_remove_after": 60,
+    "private_remove_after": 300
 }

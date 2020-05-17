@@ -6,7 +6,8 @@ import trxbetbot.emoji as emo
 
 from tronapi import Tron
 from tronapi.main import Address
-from telegram import ParseMode
+from telegram import ParseMode, Chat
+from datetime import datetime, timedelta
 from trxbetbot.plugin import TrxBetBotPlugin
 from trxbetbot.tronscan import Tronscan
 
@@ -31,12 +32,6 @@ class Bet(TrxBetBotPlugin):
         if not self.table_exists("bets"):
             sql = self.get_resource("create_bets.sql")
             self.execute_sql(sql)
-
-        clean_losses = self.config.get("clean_losses")
-
-        if clean_losses:
-            # Create background job that removes messages related to losses
-            self.repeat_job(self.remove_losses, clean_losses, first=clean_losses)
 
         return self
 
@@ -192,14 +187,18 @@ class Bet(TrxBetBotPlugin):
         else:
             return False
 
-    def remove_losses(self, bot, job):
-        for msg in self.config.get("loss_messages"):
-            try:
-                bot.delete_message(chat_id=msg['chat_id'], message_id=msg['msg_id'])
-                logging.info(f"Loss message removed: {msg}")
-            except Exception as e:
-                logging.warning(f"Cant delete message: {e}")
-        self.config.set(list(), "loss_messages")
+    def _remove_losses(self, bot, job):
+        param_lst = job.context.split("_")
+        chat_id = param_lst[0]
+        msg_id = param_lst[1]
+
+        try:
+            logging.info(f"Removing {self.get_name()}-message (chat_id {chat_id} msg_id {msg_id})")
+            bot.delete_message(chat_id=chat_id, message_id=msg_id)
+            logging.info(f"Removed {self.get_name()}-message (chat_id {chat_id} msg_id {msg_id})")
+        except Exception as e:
+            msg = f"Not possible to remove {self.get_name()}-message (chat_id {chat_id} msg_id {msg_id}): {e}"
+            logging.error(msg)
 
     def contains_all(self, chars):
         """ Check if characters in 'chars' are all valid characters """
@@ -450,7 +449,7 @@ class Bet(TrxBetBotPlugin):
         block_link = f"[Block Explorer](https://tronscan.org/#/block/{bet.bet_trx_block})"
 
         # --------------- USER WON ---------------
-        if bet.bet_won:
+        if bet.bet_won == 1:
             if second_chance_win:
                 winnings_trx = second_chance_trx
                 winnings_sun = tron.toSun(winnings_trx)
@@ -578,10 +577,16 @@ class Bet(TrxBetBotPlugin):
 
         if not bet.bet_won:
             if message:
-                # Save messages about lost bets so that they can be removed later
-                msg_list = self.config.get("loss_messages")
-                msg_list.append({"chat_id": message.chat_id, "msg_id": message.message_id})
-                self.config.set(msg_list, "loss_messages")
+                if bot.get_chat(update.message.chat_id).type == Chat.PRIVATE:
+                    remove_time = self.config.get("private_remove_after")
+                else:
+                    remove_time = self.config.get("public_remove_after")
+
+                if message:
+                    self.run_job(
+                        self._remove_losses,
+                        datetime.now() + timedelta(seconds=remove_time),
+                        context=f"{message.chat_id}_{message.message_id}")
 
         # Remove messages after betting address isn't valid anymore
         self.remove_messages(bot, msg1, msg2, bet_addr58)

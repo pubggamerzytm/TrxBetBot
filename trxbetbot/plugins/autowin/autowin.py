@@ -25,6 +25,7 @@ class Autowin(TrxBetBotPlugin):
             msg = f"{emo.ERROR} Not possible to read bets for /{self.get_name()}"
             logging.error(res)
             self.notify(msg)
+            return self
 
         for autowin in res["data"]:
             context = {
@@ -32,7 +33,11 @@ class Autowin(TrxBetBotPlugin):
                 "bet_chars": autowin[1]
             }
 
-            self.repeat_job(self.auto_win, self.config.get("interval"), context=context, name=autowin[0])
+            self.repeat_job(
+                self.auto_win,
+                self.config.get("interval"),
+                context=context,
+                name=self.get_name() + autowin[0])
 
         return self
 
@@ -48,7 +53,7 @@ class Autowin(TrxBetBotPlugin):
                 sql = self.get_resource("delete_autowin.sql")
                 self.execute_sql(sql, update.effective_user.id)
 
-                job = self.get_job(name=usr_id)
+                job = self.get_job(name=self.get_name() + usr_id)
                 if job: job.schedule_removal()
 
                 msg = f"{emo.INFO} Stopped automatic betting"
@@ -101,9 +106,14 @@ class Autowin(TrxBetBotPlugin):
         msg = f"{emo.MONEY_FACE} Starting Auto-Betting..."
         update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
 
-        # Repeating job for auto-send
         logging.info("Creating repeating job for auto-win")
-        self.repeat_job(self.auto_win, self.config.get("interval"), context=context, name=usr_id)
+
+        # Repeating job for auto-send
+        self.repeat_job(
+            self.auto_win,
+            self.config.get("interval"),
+            context=context,
+            name=self.get_name() + usr_id)
 
     def auto_win(self, bot, job):
         update = job.context["update"]

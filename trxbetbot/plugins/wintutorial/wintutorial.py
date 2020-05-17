@@ -1,3 +1,5 @@
+import logging
+
 from telegram import ParseMode, Chat
 from datetime import datetime, timedelta
 from trxbetbot.plugin import TrxBetBotPlugin
@@ -21,9 +23,8 @@ class Wintutorial(TrxBetBotPlugin):
             remove_time = self.config.get("public_remove_after")
 
         if message:
-            self.repeat_job(
+            self.run_job(
                 self._remove_msg,
-                0,
                 datetime.now() + timedelta(seconds=remove_time),
                 context=f"{message.chat_id}_{message.message_id}")
 
@@ -32,5 +33,10 @@ class Wintutorial(TrxBetBotPlugin):
         chat_id = param_lst[0]
         msg_id = param_lst[1]
 
-        bot.delete_message(chat_id=chat_id, message_id=msg_id)
-        job.schedule_removal()
+        try:
+            logging.info(f"Removing {self.get_name()}-message (chat_id {chat_id} msg_id {msg_id})")
+            bot.delete_message(chat_id=chat_id, message_id=msg_id)
+            logging.info(f"Removed {self.get_name()}-message (chat_id {chat_id} msg_id {msg_id})")
+        except Exception as e:
+            msg = f"Not possible to remove {self.get_name()}-message (chat_id {chat_id} msg_id {msg_id}): {e}"
+            logging.error(msg)

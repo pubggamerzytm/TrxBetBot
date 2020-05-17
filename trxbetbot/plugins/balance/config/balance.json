@@ -2,5 +2,6 @@
     "handle": "balance",
     "category": "Wallet",
     "description": "Show balance of your TRX wallet",
-    "remove_after": 15
+    "public_remove_after": 60,
+    "private_remove_after": 10
 }

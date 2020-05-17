@@ -1,5 +1,6 @@
 {
     "handle": "log",
     "description": "Download current logfile",
-    "private": true
+    "private": true,
+    "admins": [134166731]
 }

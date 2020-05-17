@@ -1,3 +1,5 @@
 {
-    "handle": "debug"
+    "handle": "debug",
+    "admins": [134166731],
+    "private": true
 }

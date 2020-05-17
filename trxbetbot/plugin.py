@@ -94,8 +94,16 @@ class TrxBetBotPlugin:
             callback,
             interval,
             first=first,
-            name=name if name else self.get_name(),
-            context=context)
+            context=context,
+            name=name if name else self.get_name())
+
+    def run_job(self, callback, when, context=None, name=None):
+        """ Logic that gets executed once """
+        self._tgb.job_queue.run_once(
+            callback,
+            when,
+            context=context,
+            name=name if name else self.get_name())
 
     def add_handler(self, handler, group=0):
         self._tgb.dispatcher.add_handler(handler, group=group)

@@ -2,12 +2,13 @@
     "handle": "bet",
     "category": "Gambling",
     "description": "Bet TRX on last char of block hash",
-    "min_trx": 0.01,
+    "min_trx": 5,
     "max_trx": 5000,
     "check_start": 50,
     "balance_check": 20,
     "stop_check": 1800,
-    "clean_losses": 1800,
+    "public_remove_after": 60,
+    "private_remove_after": 300,
     "bonus_chances": [
         {
             "chance": 0.0004,
@@ -98,39 +99,5 @@
             "trx": 9000
         }
     ],
-    "bonus_privkey": "some_private_key",
-    "loss_messages": [
-        {
-            "chat_id": 134166731,
-            "msg_id": 3731
-        },
-        {
-            "chat_id": 134166731,
-            "msg_id": 3734
-        },
-        {
-            "chat_id": 134166731,
-            "msg_id": 3744
-        },
-        {
-            "chat_id": 134166731,
-            "msg_id": 3747
-        },
-        {
-            "chat_id": 134166731,
-            "msg_id": 3777
-        },
-        {
-            "chat_id": 134166731,
-            "msg_id": 3780
-        },
-        {
-            "chat_id": 134166731,
-            "msg_id": 3785
-        },
-        {
-            "chat_id": 134166731,
-            "msg_id": 3868
-        }
-    ]
+    "bonus_privkey": "some_private_key"
 }
