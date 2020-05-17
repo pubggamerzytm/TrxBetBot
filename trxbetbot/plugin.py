@@ -88,6 +88,7 @@ class TrxBetBotPlugin:
 
         return jobs[0]
 
+    # TODO: Maybe better set unique identifier as name?
     def repeat_job(self, callback, interval, first=0, context=None, name=None):
         """ Logic that gets executed periodically """
         self._tgb.job_queue.run_repeating(
@@ -97,6 +98,7 @@ class TrxBetBotPlugin:
             context=context,
             name=name if name else self.get_name())
 
+    # TODO: Maybe better set unique identifier as name?
     def run_job(self, callback, when, context=None, name=None):
         """ Logic that gets executed once """
         self._tgb.job_queue.run_once(
@@ -369,6 +371,7 @@ class TrxBetBotPlugin:
             return thread
         return _threaded
 
+    # TODO: Change this so that the entry in the config is not needed
     @classmethod
     def private(cls, func):
         """ Decorator for methods that need to be run in a private chat with the bot """
