@@ -52,7 +52,6 @@ class Mix(TrxBetBotPlugin):
             return
 
         if not str(len(choice)) in preset:
-            # keys = ' or '.join(list(preset.keys()))
             msg = f"{emo.ERROR} You need to provide 1-{len(preset)} characters and not {len(choice)}"
             update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             return
@@ -147,7 +146,7 @@ class Mix(TrxBetBotPlugin):
         # --- Start auto-bet logic - send TRX from user wallet to generated wallet ---
 
         if self.is_automix(update):
-            logging.info("Bet is an auto-win")
+            logging.info("Bet is an auto-mix")
 
             # Get users wallet to send bet TRX from
             sql = self.get_global_resource("select_address.sql")
@@ -411,7 +410,8 @@ class Mix(TrxBetBotPlugin):
         # Determine if bet was won or not
         # But only if not already saved
         if bet.bet_won is None:
-            bet.bet_won = str(bet.bet_trx_block_hash).lower().endswith(choice.lower())
+            end_of_hash = bet.bet_trx_block_hash[-len(choice):]
+            bet.bet_won = set(choice) <= set(end_of_hash)
 
         logging.info(f"Job {bet_addr58} - WON: {bet.bet_won} Choice: {choice} Hash: {bet.bet_trx_block_hash}")
 
