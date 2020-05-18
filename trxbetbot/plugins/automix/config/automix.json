@@ -1,0 +1,7 @@
+{
+    "handle": "automix",
+    "description": "Automatically place a bet for /mix",
+    "category": "Automatic Betting",
+    "private": true,
+    "interval": 120
+}
