@@ -1,0 +1,7 @@
+{
+    "handle": "tutorialmix",
+    "category": "Tutorials",
+    "description": "How-To for HashLotto Mix",
+    "public_remove_after": 60,
+    "private_remove_after": 300
+}

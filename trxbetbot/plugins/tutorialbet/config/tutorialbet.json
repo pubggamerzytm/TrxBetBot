@@ -1,0 +1,7 @@
+{
+    "handle": "tutorialbet",
+    "category": "Tutorials",
+    "description": "How-To for HashLotto Bet",
+    "public_remove_after": 60,
+    "private_remove_after": 300
+}

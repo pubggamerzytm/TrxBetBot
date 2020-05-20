@@ -1,7 +1,7 @@
 {
-    "handle": "wintutorial",
+    "handle": "tutorialwin",
     "category": "Tutorials",
-    "description": "How-To for HashLotto Jackpot",
+    "description": "How-To for HashLotto Win",
     "public_remove_after": 60,
     "private_remove_after": 300
 }
