@@ -1,0 +1,3 @@
+SELECT * FROM (
+SELECT * FROM bets ORDER BY rowid DESC LIMIT ?)
+ORDER BY rowid ASC;

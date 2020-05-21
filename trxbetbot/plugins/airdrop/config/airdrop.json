@@ -1,3 +1,7 @@
 {
-    "handle": "airdrop"
+    "handle": "airdrop",
+    "category": "Tipping",
+    "description": "Tip HashLotto users in current group",
+    "number_of_users": 50,
+    "minus": 7
 }
