@@ -492,6 +492,8 @@ class Bet(TrxBetBotPlugin):
                     if "code" in send_user and "message" in send_user:
                         raise Exception(send_user["message"])
 
+                    bet.pay_trx_id = send_user["transaction"]["txID"]
+
                     if second_chance_win:
                         logging.info(f"Job {bet_addr58} - Send from Bonus to User: {send_user}")
                     else:
@@ -505,8 +507,6 @@ class Bet(TrxBetBotPlugin):
                         job.schedule_removal()
 
                     return
-
-                bet.pay_trx_id = send_user["transaction"]["txID"]
 
             # Determine path for winning animation
             if second_chance_win:

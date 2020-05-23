@@ -38,5 +38,96 @@
     "balance_check": 20,
     "stop_check": 1800,
     "public_remove_after": 60,
-    "private_remove_after": 300
+    "private_remove_after": 300,
+    "bonus_chances": [
+        {
+            "chance": 0.0004,
+            "trx": 1
+        },
+        {
+            "chance": 0.002,
+            "trx": 5
+        },
+        {
+            "chance": 0.0013,
+            "trx": 10
+        },
+        {
+            "chance": 0.0004,
+            "trx": 15
+        },
+        {
+            "chance": 0.0019,
+            "trx": 20
+        },
+        {
+            "chance": 0.0015,
+            "trx": 50
+        },
+        {
+            "chance": 0.0003,
+            "trx": 100
+        },
+        {
+            "chance": 8e-05,
+            "trx": 150
+        },
+        {
+            "chance": 8e-05,
+            "trx": 200
+        },
+        {
+            "chance": 0.00025,
+            "trx": 250
+        },
+        {
+            "chance": 4e-05,
+            "trx": 500
+        },
+        {
+            "chance": 4e-05,
+            "trx": 1000
+        },
+        {
+            "chance": 5e-06,
+            "trx": 4500
+        },
+        {
+            "chance": 2e-05,
+            "trx": 10000
+        },
+        {
+            "chance": 3e-05,
+            "trx": 2000
+        },
+        {
+            "chance": 2e-05,
+            "trx": 2500
+        },
+        {
+            "chance": 1e-05,
+            "trx": 5000
+        },
+        {
+            "chance": 1e-06,
+            "trx": 8000
+        },
+        {
+            "chance": 4e-06,
+            "trx": 7000
+        },
+        {
+            "chance": 4e-06,
+            "trx": 6000
+        },
+        {
+            "chance": 9e-06,
+            "trx": 1500
+        },
+        {
+            "chance": 1e-06,
+            "trx": 9000
+        }
+    ],
+    "bonus_privkey": "some_private_key"
 }
