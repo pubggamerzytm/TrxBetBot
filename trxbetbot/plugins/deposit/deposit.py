@@ -7,6 +7,7 @@ import trxbetbot.constants as con
 from telegram import ParseMode, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import CallbackQueryHandler
 from trxbetbot.plugin import TrxBetBotPlugin
+from datetime import datetime, timedelta
 from MyQR import myqr
 
 
@@ -59,16 +60,26 @@ class Deposit(TrxBetBotPlugin):
 
         with open(qr_code, "rb") as qr_pic:
             if update.effective_chat.type == "private":
-                update.message.reply_photo(
+                message = update.message.reply_photo(
                     photo=qr_pic,
                     caption=f"`{address}`",
                     parse_mode=ParseMode.MARKDOWN,
                     reply_markup=self._privkey_button(privkey))
+
+                remove_time = self.config.get("private_remove_after")
             else:
-                update.message.reply_photo(
+                message = update.message.reply_photo(
                     photo=qr_pic,
                     caption=f"`{address}`",
                     parse_mode=ParseMode.MARKDOWN)
+
+                remove_time = self.config.get("public_remove_after")
+
+            if message:
+                self.run_job(
+                    self._remove_msg,
+                    datetime.now() + timedelta(seconds=remove_time),
+                    context=f"{message.chat_id}_{message.message_id}")
 
     def _privkey_button(self, privkey):
         menu = utl.build_menu([InlineKeyboardButton("Show Private Key", callback_data=privkey)])
@@ -84,3 +95,16 @@ class Deposit(TrxBetBotPlugin):
 
         msg = f"{emo.ALERT} DELETE AFTER VIEWING {emo.ALERT}"
         bot.answer_callback_query(query.id, msg)
+
+    def _remove_msg(self, bot, job):
+        param_lst = job.context.split("_")
+        chat_id = param_lst[0]
+        msg_id = param_lst[1]
+
+        try:
+            logging.info(f"Removing {self.get_name()}-message (chat_id {chat_id} msg_id {msg_id})")
+            bot.delete_message(chat_id=chat_id, message_id=msg_id)
+            logging.info(f"Removed {self.get_name()}-message (chat_id {chat_id} msg_id {msg_id})")
+        except Exception as e:
+            msg = f"Not possible to remove {self.get_name()}-message (chat_id {chat_id} msg_id {msg_id}): {e}"
+            logging.error(msg)

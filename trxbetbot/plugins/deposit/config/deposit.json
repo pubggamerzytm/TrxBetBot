@@ -1,5 +1,7 @@
 {
     "handle": "deposit",
     "category": "Wallet",
-    "description": "Deposit TRX to your bot wallet"
+    "description": "Deposit TRX to your bot wallet",
+    "public_remove_after": 60,
+    "private_remove_after": 300
 }

@@ -1,5 +1,7 @@
 {
     "handle": "feedback",
     "category": "Bot",
-    "description": "Send us your feedback"
+    "description": "Send us your feedback",
+    "public_remove_after": 60,
+    "private_remove_after": 300
 }

@@ -1,5 +1,7 @@
 {
     "handle": "tip",
     "category": "Wallet",
-    "description": "Tip another Telegram user with TRX"
+    "description": "Tip another Telegram user with TRX",
+    "public_remove_after": 60,
+    "private_remove_after": 300
 }

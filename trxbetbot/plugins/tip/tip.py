@@ -4,12 +4,12 @@ import trxbetbot.utils as utl
 import trxbetbot.constants as con
 
 from tronapi import Tron
-from telegram import ParseMode
+from telegram import ParseMode, Chat
+from datetime import datetime, timedelta
 from trxbetbot.plugin import TrxBetBotPlugin
 
 
 # TODO: Add possibility to immediately create a wallet if user doesn't have one (the receiver)
-# TODO: Add examples to usage-files
 class Tip(TrxBetBotPlugin):
 
     def __enter__(self):
@@ -123,7 +123,18 @@ class Tip(TrxBetBotPlugin):
             msg = f"{emo.DONE} @{utl.esc_md(from_username)} tipped @{utl.esc_md(to_username)} with " \
                   f"`{amount}` TRX. View [Block Explorer]({explorer_link}) (wait ~1 minute)"
 
-            update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN, disable_web_page_preview=True)
+            message = update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN, disable_web_page_preview=True)
+
+            if bot.get_chat(update.message.chat_id).type == Chat.PRIVATE:
+                remove_time = self.config.get("private_remove_after")
+            else:
+                remove_time = self.config.get("public_remove_after")
+
+            if message:
+                self.run_job(
+                    self._remove_msg,
+                    datetime.now() + timedelta(seconds=remove_time),
+                    context=f"{message.chat_id}_{message.message_id}")
 
             backslash = "\n"
             logging.info(f"{msg.replace(backslash, '')} - {update}")
@@ -157,3 +168,16 @@ class Tip(TrxBetBotPlugin):
             else:
                 update.message.reply_text(f"{emo.ERROR} {repr(e)}")
                 self.notify(e)
+
+    def _remove_msg(self, bot, job):
+        param_lst = job.context.split("_")
+        chat_id = param_lst[0]
+        msg_id = param_lst[1]
+
+        try:
+            logging.info(f"Removing {self.get_name()}-message (chat_id {chat_id} msg_id {msg_id})")
+            bot.delete_message(chat_id=chat_id, message_id=msg_id)
+            logging.info(f"Removed {self.get_name()}-message (chat_id {chat_id} msg_id {msg_id})")
+        except Exception as e:
+            msg = f"Not possible to remove {self.get_name()}-message (chat_id {chat_id} msg_id {msg_id}): {e}"
+            logging.error(msg)
