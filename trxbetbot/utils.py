@@ -67,3 +67,9 @@ def split_msg(msg, max_len=None, split_char="\n", only_one=False):
 def encode_url(trxid):
     import urllib.parse as ul
     return ul.quote_plus(trxid)
+
+
+def id(length=8):
+    import string, random
+    alphabet = string.ascii_uppercase + string.digits
+    return ''.join(random.choices(alphabet, k=length))
