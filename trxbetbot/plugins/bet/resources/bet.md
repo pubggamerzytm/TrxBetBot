@@ -1,2 +1,7 @@
-/{{handle}} <0123456789abcdef>
-Provide the characters that you want to bet on as the argument to this command. Example: /{{handle}} 301ca. That would mean that you are betting that one of these characters is the last character of the block hash.
+`/{{handle}} <0123456789abcdef>`
+Provide the characters that you want to bet on as the argument to this command.
+
+Example:  
+`/{{handle}} 301ca`
+
+That would mean that you are betting that one of these characters is the last character of the block hash.

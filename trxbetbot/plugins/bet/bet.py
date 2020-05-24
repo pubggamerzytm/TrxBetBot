@@ -18,8 +18,8 @@ class Bet(TrxBetBotPlugin):
 
     _WON_DIR = "won"
     _LOST_DIR = "lost"
-    _SECOND_CHANCE_DIR = "won_second"
     _VALID_CHARS = "123456789abcdef"
+    _SECOND_CHANCE_DIR = "won_second"
     _LEVERAGE = {1: 14.4, 2: 7.2014, 3: 4.8453, 4: 3.6604, 5: 2.9273, 6: 2.4246, 7: 2.0803, 8: 1.8122,
                  9: 1.6231, 10: 1.4562, 11: 1.3221, 12: 1.2131, 13: 1.1264, 14: 1.0523}
 
@@ -86,61 +86,40 @@ class Bet(TrxBetBotPlugin):
         choice = "".join(sorted(chars))
         leverage = self._LEVERAGE[len(chars)]
 
-        min_trx = self.config.get("min_trx")
-        max_trx = self.config.get("max_trx")
-
-        if self.is_autobet(update):
-            msg = self.get_resource("betting_autobet.md")
-        else:
-            msg = self.get_resource("betting.md")
-
-        msg = msg.replace("{{choice}}", choice)
-        msg = msg.replace("{{count}}", str(count))
-        msg = msg.replace("{{min}}", str(min_trx))
-        msg = msg.replace("{{max}}", str(max_trx))
-        msg = msg.replace("{{factor}}", str(leverage))
-        logging.info(msg.replace("\n", ""))
-
-        msg1 = update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
-
-        if self.is_autobet(update):
-            msg = f"{emo.WAIT} Auto-Sending TRX..."
-        else:
-            msg = f"`{account.address.base58}`"
-
-        msg2 = update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
-
         # Save bet details to database
         sql = self.get_resource("insert_bet.sql")
         self.execute_sql(sql, account.address.base58, choice, update.effective_user.id)
 
-        first = self.config.get("check_start")
-        check = self.config.get("balance_check")
+        # Get mix and max amounts for this bet from config
+        min_trx = self.config.get("min_trx")
+        max_trx = self.config.get("max_trx")
 
-        context = {
-            "tron": tron,
-            "choice": choice,
-            "update": update,
-            "start": time.time(),
-            "msg1": msg1,
-            "msg2": msg2
-        }
-
-        self.repeat_job(self.scan_balance, check, first=first, context=context)
-
-        logging.info(f"Initiated repeating job for {account.address.base58}")
+        # Get users wallet to send bet TRX from
+        sql = self.get_global_resource("select_address.sql")
+        res = self.execute_global_sql(sql, update.effective_user.id)
 
         # --- Start auto-bet logic - send TRX from user wallet to generated wallet ---
 
         if self.is_autobet(update):
             logging.info("Bet is an auto-bet")
 
-            # Get users wallet to send bet TRX from
-            sql = self.get_global_resource("select_address.sql")
-            res = self.execute_global_sql(sql, update.effective_user.id)
+            msg = self.get_resource("betting_autobet.md")
+            msg = msg.replace("{{choice}}", choice)
+            msg = msg.replace("{{count}}", str(count))
+            msg = msg.replace("{{min}}", str(min_trx))
+            msg = msg.replace("{{max}}", str(max_trx))
+            msg = msg.replace("{{factor}}", str(leverage))
+            msg1 = update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
+
+            logging.info(msg.replace("\n", " "))
+
+            msg = f"{emo.WAIT} AUTO-BET: Sending TRX from your wallet..."
+            msg2 = update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
+
+            logging.info(msg.replace("\n", " "))
 
             if not res["success"]:
-                msg = f"{emo.ERROR} Autobet stopped. Your TRX wallet could not be determined."
+                msg = f"{emo.ERROR} Auto-bet stopped. Your TRX wallet could not be determined."
                 update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
                 self.get_job(update.effective_user.id).schedule_removal()
                 logging.error(res)
@@ -167,18 +146,103 @@ class Bet(TrxBetBotPlugin):
 
             # Send determined bet amount from user wallet to generated wallet
             send = from_user.trx.send(tron.default_address.hex, bet_amount)
-            logging.info(f"Autobet {bet_amount} TRX - {send}")
+            logging.info(f"Auto-bet {bet_amount} TRX - {send}")
 
             if "code" in send and "message" in send:
-                msg = f"{emo.ERROR} Autobet stopped. Not possible to send {bet_amount} TRX: {send['message']}"
+                msg = f"{emo.ERROR} Auto-bet stopped. Not possible to send {bet_amount} TRX: {send['message']}"
                 update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
                 self.get_job(update.effective_user.id).schedule_removal()
                 logging.error(msg)
                 return
 
-            msg = f"{emo.DONE} Successfully sent `{bet_amount}` TRX to `{account.address.base58}`"
+            msg = f"{emo.DONE} AUTO-BET: Successfully sent `{bet_amount}` TRX to `{account.address.base58}`"
             msg2.edit_text(msg, parse_mode=ParseMode.MARKDOWN)
-            logging.info(msg)
+
+            logging.info(msg.replace("\n", " "))
+
+        # --- Start normal logic - either auto-send if possible or manual-send ---
+
+        else:
+            default_amount = 0.01  # TODO: Change this - needs to be float!
+            manual_send = False
+
+            try:
+                if not res["success"]:
+                    raise Exception(f"Users TRX wallet could not be determined: {res}")
+
+                from_user = Tron()
+                from_user.private_key = res["data"][0][2]
+                from_user.default_address = res["data"][0][1]
+
+                # Get balance (in "Sun") of generated address
+                balance = from_user.trx.get_balance()
+                trx_balance = from_user.fromSun(balance)
+
+                if trx_balance < default_amount:
+                    raise Exception(f"Not enough balance for autosend: {trx_balance}")
+            except Exception as e:
+                logging.warning(f"Couldn't activate autosend: {e}")
+                manual_send = True
+
+            if manual_send:
+                msg = self.get_resource("betting_manual.md")
+            else:
+                msg = self.get_resource("betting.md")
+
+            msg = msg.replace("{{choice}}", choice)
+            msg = msg.replace("{{count}}", str(count))
+            msg = msg.replace("{{min}}", str(min_trx))
+            msg = msg.replace("{{max}}", str(max_trx))
+            msg = msg.replace("{{factor}}", str(leverage))
+            msg1 = update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
+
+            logging.info(msg.replace("\n", ""))
+
+            if manual_send:
+                msg = f"`{account.address.base58}`"
+            else:
+                msg = f"{emo.WAIT} Sending TRX from your wallet..."
+
+            msg2 = update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
+
+            logging.info(msg.replace("\n", ""))
+
+            if not manual_send:
+                try:
+                    # Send bet amount from user wallet to generated wallet
+                    send = from_user.trx.send(tron.default_address.hex, default_amount)
+                    logging.info(f"Sent {default_amount} TRX - {send}")
+
+                    if "code" in send and "message" in send:
+                        raise Exception(send['message'])
+
+                    msg = f"{emo.DONE} Successfully sent `{default_amount}` TRX to `{account.address.base58}`"
+                    msg2.edit_text(msg, parse_mode=ParseMode.MARKDOWN)
+
+                    logging.info(msg.replace("\n", " "))
+                except Exception as e:
+                    msg = f"{emo.ERROR} Not possible to automatically send TRX. " \
+                          f"Please send manually to this address: `{account.address.base58}`"
+                    update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
+                    logging.error(f"Not possible to auto-send TRX: {e}")
+
+        # --- General logic ---
+
+        first = self.config.get("check_start")
+        check = self.config.get("balance_check")
+
+        context = {
+            "tron": tron,
+            "choice": choice,
+            "update": update,
+            "start": time.time(),
+            "msg1": msg1,
+            "msg2": msg2
+        }
+
+        self.repeat_job(self.scan_balance, check, first=first, context=context)
+
+        logging.info(f"Initiated repeating job for {account.address.base58}")
 
     def is_autobet(self, update):
         caption = update.effective_message.caption
