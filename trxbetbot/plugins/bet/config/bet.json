@@ -4,6 +4,7 @@
     "description": "Bet TRX on last char of block hash",
     "min_trx": 5,
     "max_trx": 5000,
+    "default_trx": 50,
     "check_start": 50,
     "balance_check": 20,
     "stop_check": 1800,

@@ -163,7 +163,7 @@ class Bet(TrxBetBotPlugin):
         # --- Start normal logic - either auto-send if possible or manual-send ---
 
         else:
-            default_amount = 0.01  # TODO: Change this - needs to be float!
+            default_amount = self.config.get("default_trx")
             manual_send = False
 
             try:
