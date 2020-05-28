@@ -36,12 +36,11 @@ class Win(TrxBetBotPlugin):
     @TrxBetBotPlugin.threaded
     @TrxBetBotPlugin.send_typing
     def execute(self, bot, update, args):
-        if len(args) != 1:
+        if len(args) != 2:
             update.message.reply_text(self.get_usage(), parse_mode=ParseMode.MARKDOWN)
             return
 
         choice = "".join(self.remove_unwanted(args[0]))
-        preset = self.config.get("preset")
 
         # Check if user provided any valid characters
         if len(choice) == 0:
@@ -49,6 +48,17 @@ class Win(TrxBetBotPlugin):
                   f"Allowed are: `{self._VALID_CHARS}`"
             update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             return
+
+        amount = args[1]
+
+        try:
+            amount = float(amount)
+        except:
+            msg = f"{emo.ERROR} Provide a valid TRX amount"
+            update.message.reply_text(msg)
+            return
+
+        preset = self.config.get("preset")
 
         if not str(len(choice)) in preset:
             msg = f"{emo.ERROR} You need to provide 1-{len(preset)} characters and not {len(choice)}"
@@ -174,7 +184,6 @@ class Win(TrxBetBotPlugin):
         # --- Start normal logic - either auto-send if possible or manual-send ---
 
         else:
-            default_amount = preset["default_trx"]
             manual_send = False
 
             try:
@@ -189,8 +198,8 @@ class Win(TrxBetBotPlugin):
                 balance = from_user.trx.get_balance()
                 trx_balance = from_user.fromSun(balance)
 
-                if trx_balance < default_amount:
-                    raise Exception(f"Not enough balance for autosend: {trx_balance}")
+                if trx_balance < amount:
+                    raise Exception(f"Not enough balance for autosend: {trx_balance} TRX")
             except Exception as e:
                 logging.warning(f"Couldn't activate autosend: {e}")
                 manual_send = True
@@ -221,13 +230,13 @@ class Win(TrxBetBotPlugin):
             if not manual_send:
                 try:
                     # Send bet amount from user wallet to generated wallet
-                    send = from_user.trx.send(tron.default_address.hex, default_amount)
-                    logging.info(f"Sent {default_amount} TRX - {send}")
+                    send = from_user.trx.send(tron.default_address.hex, amount)
+                    logging.info(f"Sent {amount} TRX - {send}")
 
                     if "code" in send and "message" in send:
                         raise Exception(send['message'])
 
-                    msg = f"{emo.DONE} Successfully sent `{default_amount}` TRX to `{account.address.base58}`"
+                    msg = f"{emo.DONE} Successfully sent `{amount}` TRX to `{account.address.base58}`"
                     msg2.edit_text(msg, parse_mode=ParseMode.MARKDOWN)
 
                     logging.info(msg.replace("\n", " "))

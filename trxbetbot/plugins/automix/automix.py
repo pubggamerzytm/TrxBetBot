@@ -7,8 +7,6 @@ from telegram import ParseMode
 from trxbetbot.plugin import TrxBetBotPlugin
 
 
-# TODO: What happens if i delete the message that initiated an auto-bet?
-# TODO: Issue that some betting messages will not be overwritten?
 class Automix(TrxBetBotPlugin):
 
     AUTOMIX = "automix"
@@ -30,7 +28,8 @@ class Automix(TrxBetBotPlugin):
         for automix in res["data"]:
             context = {
                 "update": pickle.loads(zlib.decompress(automix[3])),
-                "bet_chars": automix[1]
+                "bet_chars": automix[1],
+                "bet_amount": automix[2]
             }
 
             self.repeat_job(
@@ -100,7 +99,8 @@ class Automix(TrxBetBotPlugin):
 
         context = {
             "update": update,
-            "bet_chars": bet_chars
+            "bet_chars": bet_chars,
+            "bet_amount": bet_amount
         }
 
         msg = f"{emo.MONEY_FACE} Starting Auto-Betting..."
@@ -118,9 +118,10 @@ class Automix(TrxBetBotPlugin):
     def auto_mix(self, bot, job):
         update = job.context["update"]
         bet_chars = job.context["bet_chars"]
+        bet_amount = job.context["bet_amount"]
 
         # Find '/mix' plugin
         for plugin in self._tgb.plugins:
             if plugin.get_name() == "mix":
-                plugin.execute(bot, update, args=[bet_chars])
+                plugin.execute(bot, update, args=[bet_chars, bet_amount])
                 return

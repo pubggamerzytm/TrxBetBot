@@ -1,7 +1,8 @@
-`/{{handle}} <0123456789abcdef>`
-Provide one or more characters that you want to bet on.
+`/{{handle}} <characters> <amount>`
+
+Provide the characters that you want to bet on and the amount of TRX to bet as the arguments to this command. Following characters are allowed: `123456789abcdef`
 
 Example:  
-`/{{handle}} 5f`
+`/{{handle}} 301ca 20`
 
-You are betting on the block hash that includes your transaction and that it will end with the provided characters in sequence. Capitalization will not be considered.
+That would mean that you are betting 20 TRX on the block hash that includes your transaction and that it will end with `301ca`. Capitalization will not be considered.

@@ -6,42 +6,36 @@
         "1": {
             "min_trx": 5,
             "max_trx": 5000,
-            "default_trx": 100,
             "leverage": 14.4
         },
         "2": {
             "min_trx": 5,
             "max_trx": 1000,
-            "default_trx": 50,
             "leverage": 50
         },
         "3": {
             "min_trx": 5,
             "max_trx": 250,
-            "default_trx": 20,
             "leverage": 250
         },
         "4": {
             "min_trx": 5,
             "max_trx": 300,
-            "default_trx": 15,
             "leverage": 777
         },
         "5": {
             "min_trx": 5,
             "max_trx": 100,
-            "default_trx": 10,
             "leverage": 5000
         },
         "6": {
             "min_trx": 5,
             "max_trx": 50,
-            "default_trx": 5,
             "leverage": 10000
         }
     },
-    "check_start": 50,
-    "balance_check": 20,
+    "check_start": 55,
+    "balance_check": 5,
     "stop_check": 1800,
     "public_remove_after": 60,
     "private_remove_after": 300,
