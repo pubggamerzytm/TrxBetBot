@@ -1,4 +1,4 @@
-*YOU WON BY SECOND CHANCE!* Total: `{{winnings}}` TRX
+*YOU WON BY SECOND CHANCE!*
 
 {{explorer}}  
 Your Characters: `{{chars}}`  
