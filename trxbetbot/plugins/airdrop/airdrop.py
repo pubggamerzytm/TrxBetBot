@@ -86,6 +86,9 @@ class Airdrop(TrxBetBotPlugin):
         # Get last user IDs
         user_ids = set()
         for bet in reversed(final):
+            # Do not tip own user
+            if int(update.effective_user.id) == int(bet[2]):
+                continue
             user_ids.add(bet[2])
 
             if len(user_ids) == nr_users:
@@ -93,12 +96,15 @@ class Airdrop(TrxBetBotPlugin):
 
         logging.info(f"User IDs to tip: {user_ids}")
 
-        user_amount = amount / len(user_ids)
+        fees = con.TRX_FEE * (len(user_ids) + 1)
+        total = float(amount) - fees
+        user_amount = total / len(user_ids)
 
         logging.info(f"Initial amount: {initial_amount} - "
                      f"Minus %: {minus_percent} - "
                      f"Amount: {amount} - "
                      f"Bot amount: {bot_amount} - "
+                     f"Fee amount: {fees}"
                      f"User amount: {user_amount}")
 
         if user_amount <= self.MIN_AMOUNT:
@@ -143,12 +149,9 @@ class Airdrop(TrxBetBotPlugin):
         balance = tron.trx.get_balance()
         available_amount = tron.fromSun(balance)
 
-        fees = con.TRX_FEE * (len(users_str) + 1)
-        total = float(initial_amount) + fees
+        logging.info(f"Balance: {balance}")
 
-        logging.info(f"Balance: {balance} - Total fees: {fees} - Total: {total}")
-
-        if available_amount < total:
+        if available_amount < float(initial_amount):
             msg = f"{emo.ERROR} Not enough balance. You need {total} TRX for this airdrop."
             update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             logging.error(f"{msg} - {res_mix}")
