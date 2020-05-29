@@ -685,6 +685,14 @@ class Win(TrxBetBotPlugin):
             msg = f"User {u} just won {second_chance_trx} TRX by second chance"
             self.notify(msg)
 
+            for admin in self.config.get("bonus_notify"):
+                try:
+                    msg = f"{emo.ALERT} Admin Notification {emo.ALERT}\n{msg}"
+                    bot.send_message(admin, msg)
+                except Exception as e:
+                    error = f"Not possible to notify admin id '{admin}'"
+                    logging.error(f"{error}: {e}")
+
         logging.info(f"Job {bet_addr58} - Ending job")
 
     def remove_messages(self, bot, msg1, msg2, bet_addr58):

@@ -129,5 +129,6 @@
             "trx": 9000
         }
     ],
+    "bonus_notify": [],
     "bonus_privkey": "some_private_key"
 }
