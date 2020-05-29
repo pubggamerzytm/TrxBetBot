@@ -4,7 +4,6 @@ import trxbetbot.constants as con
 
 from tronapi import Tron
 from telegram import ParseMode, Chat
-from datetime import datetime, timedelta
 from trxbetbot.plugin import TrxBetBotPlugin
 
 
@@ -25,6 +24,7 @@ class Airdrop(TrxBetBotPlugin):
             logging.error(f"{msg} - {user_wallet}")
             return
 
+        # Get number of users to tip
         nr_users = self.config.get("number_of_users")
 
         info = self.get_resource("info.md")
@@ -47,6 +47,8 @@ class Airdrop(TrxBetBotPlugin):
             update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             return
 
+        # Select more data sets than we need to make sure that after
+        # filtering out same users we still have the needed amount of data
         bet_count = nr_users * 5
 
         sql = self.get_resource("select_last.sql")
@@ -98,16 +100,16 @@ class Airdrop(TrxBetBotPlugin):
 
         fees = con.TRX_FEE * (len(user_ids) + 1)
         total = float(amount) - fees
-        user_amount = total / len(user_ids)
+        usr_amount = total / len(user_ids)
 
         logging.info(f"Initial amount: {initial_amount} - "
                      f"Minus %: {minus_percent} - "
                      f"Amount: {amount} - "
                      f"Bot amount: {bot_amount} - "
                      f"Fee amount: {fees}"
-                     f"User amount: {user_amount}")
+                     f"User amount: {usr_amount}")
 
-        if user_amount <= self.MIN_AMOUNT:
+        if usr_amount <= self.MIN_AMOUNT:
             msg = f"{emo.ERROR} Not possible to tip less than {self.MIN_AMOUNT} TRX"
             update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             logging.error(f"{msg} - {res_mix}")
@@ -115,29 +117,10 @@ class Airdrop(TrxBetBotPlugin):
 
         sql = self.get_resource("select_user.sql")
 
-        # Get last usernames
-        addresses = list()
-        users_str = str()
-        for user_id in user_ids:
-            res = self.execute_global_sql(sql, user_id)["data"]
-            if res:
-                addresses.append(res[0][5])
-
-                username = f"@{res[0][1]}" if res[0][1] else res[0][2]
-                users_str += username + ", "
-
-        users_str = users_str[:-2]
-
         if update.effective_user.username:
             tipping_usr = f"@{update.effective_user.username}"
         else:
             tipping_usr = update.effective_user.first_name
-
-        tipping = self.get_resource("tipping.md")
-        tipping = tipping.replace("{{user}}", tipping_usr)
-        tipping = tipping.replace("{{amount}}", str(initial_amount))
-        tipping = tipping.replace("{{useramount}}", str(user_amount))
-        tipping = tipping.replace("{{userlist}}", users_str)
 
         # Set up user wallet
         trx_kwargs = dict()
@@ -149,35 +132,67 @@ class Airdrop(TrxBetBotPlugin):
         balance = tron.trx.get_balance()
         available_amount = tron.fromSun(balance)
 
-        logging.info(f"Balance: {balance}")
+        logging.info(f"Balance: {available_amount}")
 
+        # Check if balance is sufficient
         if available_amount < float(initial_amount):
             msg = f"{emo.ERROR} Not enough balance. You need {total} TRX for this airdrop."
             update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             logging.error(f"{msg} - {res_mix}")
             return
 
-        # Send share to bot wallet
+        # Send TRX share to bot wallet
         bot_addr = self.get_tron().default_address.hex
         tron.trx.send(bot_addr, bot_amount)
 
-        # Tip users
-        for address in addresses:
+        users_str = str()
+
+        # Get user data and airdrop TRX
+        for user_id in user_ids:
+            res = self.execute_global_sql(sql, user_id)
+
+            if not res["success"]:
+                msg = f"{emo.ERROR} Couldn't retrieve user data for ID {user_id} to airdrop: {res}"
+                logging.error(msg)
+                self.notify(msg)
+                continue
+
+            usr_data = res["data"][0]
+            username = f"@{usr_data[1]}" if usr_data[1] else usr_data[2]
+            address = usr_data[5]
+
             try:
-                # Send tip to chosen user
-                tip = tron.trx.send(address, user_amount)
+                # Airdrop TRX to user
+                tip = tron.trx.send(address, usr_amount)
 
                 # An error was returned
                 if "code" in tip and "message" in tip:
                     raise Exception(tip["message"])
 
-                logging.info(f"Tipped address {address} with {user_amount} TRX")
-            except Exception as e:
-                msg = f"{emo.ERROR} Something went wrong. Not all users tipped"
-                update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
-                msg = f"Couldn't tip address {address} with {user_amount} TRX: {e}"
-                logging.error(msg)
-                self.notify(msg)
-                return
+                users_str += username + ", "
 
-        update.message.reply_text(tipping)
+                logging.info(f"Airdropped {usr_amount} TRX to user {username} ({user_id}) at address {address}")
+            except Exception as ex:
+                msg = f"{emo.ERROR} Not possible to airdrop {usr_amount} TRX to user {username} ({user_id})"
+                logging.error(f"{msg}: {ex}")
+                self.notify(f"{msg}: {ex}")
+
+                try:
+                    update.message.reply_text(msg)
+                except Exception as e:
+                    msg = f"Not possible to notify user {tipping_usr} about not being able to airdrop: {e}"
+                    logging.error(msg)
+
+        users_str = users_str[:-2] if users_str else "No users found"
+
+        tipping = self.get_resource("tipping.md")
+        tipping = tipping.replace("{{user}}", tipping_usr)
+        tipping = tipping.replace("{{amount}}", str(initial_amount))
+        tipping = tipping.replace("{{useramount}}", str(usr_amount))
+        tipping = tipping.replace("{{userlist}}", users_str)
+
+        try:
+            update.message.reply_text(tipping)
+        except Exception as e:
+            msg = f"Not able to send airdrop message to user {tipping_usr}: {e}"
+            logging.error(msg)
