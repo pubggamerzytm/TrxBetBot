@@ -79,7 +79,7 @@ class Automix(TrxBetBotPlugin):
 
         logging.info(f"Update: {update}")
 
-        # Identify this as an autowin and add the amount of TRX to bet
+        # Identify this as an automix and add the amount of TRX to bet
         update.effective_message.caption = f"{self.AUTOMIX}"
 
         updt = zlib.compress(pickle.dumps(update))
