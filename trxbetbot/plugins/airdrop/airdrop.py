@@ -49,7 +49,7 @@ class Airdrop(TrxBetBotPlugin):
 
         # Select more data sets than we need to make sure that after
         # filtering out same users we still have the needed amount of data
-        bet_count = nr_users * 5
+        bet_count = nr_users * 10
 
         sql = self.get_resource("select_last.sql")
         res_bet = self.execute_sql(sql, bet_count, plugin="bet")
@@ -100,7 +100,7 @@ class Airdrop(TrxBetBotPlugin):
 
         fees = con.TRX_FEE * (len(user_ids) + 1)
         total = float(amount) - fees
-        usr_amount = total / len(user_ids)
+        usr_amount = float(f"{(total / len(user_ids)):.3f}")
 
         logging.info(f"Initial amount: {initial_amount} - "
                      f"Minus %: {minus_percent} - "
@@ -151,10 +151,10 @@ class Airdrop(TrxBetBotPlugin):
         for user_id in user_ids:
             res = self.execute_global_sql(sql, user_id)
 
-            if not res["success"]:
+            if not res["success"] or not res["data"]:
+                # Issue can be that users don't exist in DB since they don't need to for betting
                 msg = f"{emo.ERROR} Couldn't retrieve user data for ID {user_id} to airdrop: {res}"
                 logging.error(msg)
-                self.notify(msg)
                 continue
 
             usr_data = res["data"][0]
