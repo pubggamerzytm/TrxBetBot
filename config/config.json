@@ -18,7 +18,8 @@
         "url": "https://somedomain.com"
     },
     "database": {
-        "use_db": true
+        "use_db": true,
+        "timeout": 15
     },
     "web": {
         "use_web": true,

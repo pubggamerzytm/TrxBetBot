@@ -161,6 +161,9 @@ class TrxBetBotPlugin:
             res["success"] = False
             return res
 
+        timeout = self.global_config.get("database", "timeout")
+        db_timeout = timeout if timeout else 5
+
         db_path = os.path.join(os.getcwd(), c.DIR_DAT, c.FILE_DAT)
 
         try:
@@ -174,9 +177,10 @@ class TrxBetBotPlugin:
             self.notify(e)
 
         con = None
+        cur = None
 
         try:
-            con = sqlite3.connect(db_path)
+            con = sqlite3.connect(db_path, timeout=db_timeout)
             cur = con.cursor()
             cur.execute(sql, args)
             con.commit()
@@ -191,6 +195,8 @@ class TrxBetBotPlugin:
         finally:
             if con:
                 con.close()
+            if cur:
+                cur.close()
 
             return res
 
@@ -206,6 +212,9 @@ class TrxBetBotPlugin:
             res["data"] = "Database disabled"
             res["success"] = False
             return res
+
+        timeout = self.global_config.get("database", "timeout")
+        db_timeout = timeout if timeout else 5
 
         if db_name:
             if not db_name.lower().endswith(".db"):
@@ -234,9 +243,10 @@ class TrxBetBotPlugin:
             self.notify(e)
 
         con = None
+        cur = None
 
         try:
-            con = sqlite3.connect(db_path)
+            con = sqlite3.connect(db_path, timeout=db_timeout)
             cur = con.cursor()
             cur.execute(sql, args)
             con.commit()
@@ -250,6 +260,8 @@ class TrxBetBotPlugin:
             self.notify(e)
         finally:
             if con:
+                cur.close()
+            if cur:
                 con.close()
 
             return res
