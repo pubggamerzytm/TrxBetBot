@@ -1,4 +1,4 @@
-*YOU WON BY SECOND CHANCE!*
+*YOU WON A BONUS WIN!*
 
 {{explorer}}  
 Your Characters: `{{chars}}`  
