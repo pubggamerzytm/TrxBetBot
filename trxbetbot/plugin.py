@@ -193,10 +193,10 @@ class TrxBetBotPlugin:
             logging.error(e)
             self.notify(e)
         finally:
-            if con:
-                con.close()
             if cur:
                 cur.close()
+            if con:
+                con.close()
 
             return res
 
@@ -259,10 +259,10 @@ class TrxBetBotPlugin:
             logging.error(e)
             self.notify(e)
         finally:
-            if con:
-                cur.close()
             if cur:
                 con.close()
+            if con:
+                cur.close()
 
             return res
 
