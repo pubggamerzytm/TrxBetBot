@@ -391,6 +391,7 @@ class TrxBetBotPlugin:
             elif update.callback_query:
                 user_id = update.callback_query.message.chat_id
             else:
+                logging.warning(f"No user ID - {update}")
                 return func(self, bot, update, **kwargs)
 
             try:
@@ -398,7 +399,7 @@ class TrxBetBotPlugin:
                     chat_id=user_id,
                     action=ChatAction.TYPING)
             except Exception as e:
-                logging.error(f"{e} - {update}")
+                logging.warning(f"{e} - {update}")
 
             return func(self, bot, update, **kwargs)
         return _send_typing
