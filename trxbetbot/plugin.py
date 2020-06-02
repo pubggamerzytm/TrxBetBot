@@ -260,9 +260,9 @@ class TrxBetBotPlugin:
             self.notify(e)
         finally:
             if cur:
-                con.close()
-            if con:
                 cur.close()
+            if con:
+                con.close()
 
             return res
 
