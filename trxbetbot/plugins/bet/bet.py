@@ -476,19 +476,8 @@ class Bet(TrxBetBotPlugin):
             # WON
             if last_char in choice:
                 bet.bet_won = "true"
-                logging.info(
-                    f"Job {bet_addr58} - "
-                    f"WON: {bet.bet_won} "
-                    f"Choice: {choice} "
-                    f"Hash: {bet.bet_trx_block_hash}")
             # LOST
             else:
-                logging.info(
-                    f"Job {bet_addr58} - "
-                    f"WON: False "
-                    f"Choice: {choice} "
-                    f"Hash: {bet.bet_trx_block_hash}")
-
                 # Chance to still win even if you lost (aka bonus)
                 bonuses = self.config.get("bonus_chances")
                 bonuses = sorted(bonuses, key=lambda k: k['chance'])
@@ -503,10 +492,9 @@ class Bet(TrxBetBotPlugin):
                         bet.bet_won = "true"
                         logging.info(
                             f"Job {bet_addr58} - "
-                            f"SECOND CHANCE WON: {bet.bet_won} "
-                            f"Choice: {choice} "
-                            f"Hash: {bet.bet_trx_block_hash} "
-                            f"Second chance probability: {bonus['chance']}% "
+                            f"SECOND CHANCE WON! "
+                            f"Amount: {second_chance_trx} "
+                            f"Probability: {bonus['chance']}% "
                             f"Random number: {random_number * 100} "
                             f"Won amount: {second_chance_trx} TRX")
                         break
@@ -514,11 +502,11 @@ class Bet(TrxBetBotPlugin):
                 # SECOND CHANCE LOST
                 if not second_chance_win:
                     bet.bet_won = "false"
-                    logging.info(
-                        f"Job {bet_addr58} - "
-                        f"SECOND CHANCE WON: {bet.bet_won} "
-                        f"Choice: {choice} "
-                        f"Hash: {bet.bet_trx_block_hash}")
+
+        logging.info(f"Job {bet_addr58} - "
+                     f"WON: {bet.bet_won} "
+                     f"Choice: {choice} "
+                     f"Hash: {bet.bet_trx_block_hash}")
 
         block_link = f"[Block Explorer](https://tronscan.org/#/block/{bet.bet_trx_block})"
 

@@ -487,20 +487,11 @@ class Mix(TrxBetBotPlugin):
         # But only if not already saved
         if bet.bet_won is None:
             end_of_hash = bet.bet_trx_block_hash[-len(choice):]
-            if set(choice) <= set(end_of_hash):
+            # WON
+            if self.match(choice, end_of_hash):
                 bet.bet_won = "true"
-                logging.info(
-                    f"Job {bet_addr58} - "
-                    f"WON: {bet.bet_won} "
-                    f"Choice: {choice} "
-                    f"Hash: {bet.bet_trx_block_hash}")
+            # LOST
             else:
-                logging.info(
-                    f"Job {bet_addr58} - "
-                    f"WON: False "
-                    f"Choice: {choice} "
-                    f"Hash: {bet.bet_trx_block_hash}")
-
                 # Chance to still win even if you lost (aka bonus)
                 bonuses = self.config.get("bonus_chances")
                 bonuses = sorted(bonuses, key=lambda k: k['chance'])
@@ -515,10 +506,9 @@ class Mix(TrxBetBotPlugin):
                         bet.bet_won = "true"
                         logging.info(
                             f"Job {bet_addr58} - "
-                            f"SECOND CHANCE WON: {bet.bet_won} "
-                            f"Choice: {choice} "
-                            f"Hash: {bet.bet_trx_block_hash} "
-                            f"Second chance probability: {bonus['chance']}% "
+                            f"SECOND CHANCE WON! "
+                            f"Amount: {second_chance_trx} "
+                            f"Probability: {bonus['chance']}% "
                             f"Random number: {random_number * 100} "
                             f"Won amount: {second_chance_trx} TRX")
                         break
@@ -526,13 +516,11 @@ class Mix(TrxBetBotPlugin):
                 # SECOND CHANCE LOST
                 if not second_chance_win:
                     bet.bet_won = "false"
-                    logging.info(
-                        f"Job {bet_addr58} - "
-                        f"SECOND CHANCE WON: {bet.bet_won} "
-                        f"Choice: {choice} "
-                        f"Hash: {bet.bet_trx_block_hash}")
 
-        logging.info(f"Job {bet_addr58} - WON: {bet.bet_won} Choice: {choice} Hash: {bet.bet_trx_block_hash}")
+        logging.info(f"Job {bet_addr58} - "
+                     f"WON: {bet.bet_won} "
+                     f"Choice: {choice} "
+                     f"Hash: {bet.bet_trx_block_hash}")
 
         block_link = f"[Block Explorer](https://tronscan.org/#/block/{bet.bet_trx_block})"
 
@@ -691,6 +679,15 @@ class Mix(TrxBetBotPlugin):
             self.notify(msg)
 
         logging.info(f"Job {bet_addr58} - Ending job")
+
+    def match(self, choice, hash_end):
+        block_lst = list(hash_end)
+        for char in list(choice):
+            if char in block_lst:
+                block_lst.remove(char)
+            else:
+                return False
+        return True
 
     def remove_messages(self, bot, msg1, msg2, bet_addr58):
         try:
