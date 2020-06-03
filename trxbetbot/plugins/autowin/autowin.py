@@ -1,8 +1,9 @@
 import zlib
 import pickle
 import logging
-
 import trxbetbot.emoji as emo
+
+from random import randrange
 from telegram import ParseMode
 from trxbetbot.plugin import TrxBetBotPlugin
 
@@ -35,6 +36,7 @@ class Autowin(TrxBetBotPlugin):
             self.repeat_job(
                 self.auto_win,
                 self.config.get("interval"),
+                first=randrange(0, 60),
                 context=context,
                 name=self.get_name() + autowin[0])
 
