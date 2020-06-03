@@ -25,6 +25,7 @@ class TelegramBot:
 
         read_timeout = self.config.get("telegram", "read_timeout")
         connect_timeout = self.config.get("telegram", "connect_timeout")
+        con_pool_size = self.config.get("telegram", "con_pool_size")
 
         tgb_kwargs = dict()
 
@@ -32,6 +33,8 @@ class TelegramBot:
             tgb_kwargs["read_timeout"] = read_timeout
         if connect_timeout:
             tgb_kwargs["connect_timeout"] = connect_timeout
+        if con_pool_size:
+            tgb_kwargs["con_pool_size"] = con_pool_size
 
         try:
             self.updater = Updater(token, request_kwargs=tgb_kwargs)
