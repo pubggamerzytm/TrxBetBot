@@ -3,6 +3,7 @@ import time
 import random
 import logging
 import trxbetbot.emoji as emo
+import trxbetbot.constants as con
 
 from tronapi import Tron
 from tronapi.main import Address
@@ -186,7 +187,7 @@ class Bet(TrxBetBotPlugin):
                 balance = from_user.trx.get_balance()
                 trx_balance = from_user.fromSun(balance)
 
-                if trx_balance < amount:
+                if trx_balance < (amount + con.TRX_FEE):
                     raise Exception(f"Not enough balance for autosend: {trx_balance} TRX")
             except Exception as e:
                 logging.warning(f"Couldn't activate autosend: {e}")
@@ -456,8 +457,6 @@ class Bet(TrxBetBotPlugin):
 
             bet.bet_trx_block_hash = block["blockID"]
 
-        last_char = bet.bet_trx_block_hash[-1:]
-
         logging.info(f"Job {bet_addr58} - "
                      f"TXID: {bet.bet_trx_id} - "
                      f"Sender: {bet.usr_address} - "
@@ -469,11 +468,14 @@ class Bet(TrxBetBotPlugin):
         second_chance_win = False
         second_chance_trx = 0
 
-        # If not already saved, save if bet was won or not
+        last_char = bet.bet_trx_block_hash[-1:]
+
+        # Determine if bet was won or lost
+        # But only if not already saved
         if bet.bet_won is None:
             # WON
             if last_char in choice:
-                bet.bet_won = True
+                bet.bet_won = "true"
                 logging.info(
                     f"Job {bet_addr58} - "
                     f"WON: {bet.bet_won} "
@@ -498,7 +500,7 @@ class Bet(TrxBetBotPlugin):
                     if random_number < (bonus["chance"] / 100):
                         second_chance_trx = bonus["trx"]
                         second_chance_win = True
-                        bet.bet_won = True
+                        bet.bet_won = "true"
                         logging.info(
                             f"Job {bet_addr58} - "
                             f"SECOND CHANCE WON: {bet.bet_won} "
@@ -511,7 +513,7 @@ class Bet(TrxBetBotPlugin):
 
                 # SECOND CHANCE LOST
                 if not second_chance_win:
-                    bet.bet_won = False
+                    bet.bet_won = "false"
                     logging.info(
                         f"Job {bet_addr58} - "
                         f"SECOND CHANCE WON: {bet.bet_won} "
@@ -521,7 +523,7 @@ class Bet(TrxBetBotPlugin):
         block_link = f"[Block Explorer](https://tronscan.org/#/block/{bet.bet_trx_block})"
 
         # --------------- USER WON ---------------
-        if bet.bet_won == 1:
+        if bet.bet_won == "true":
             if second_chance_win:
                 winnings_trx = second_chance_trx
                 winnings_sun = tron.toSun(winnings_trx)
@@ -554,10 +556,13 @@ class Bet(TrxBetBotPlugin):
                         params["private_key"] = self.config.get("bonus_privkey")
                         params["default_address"] = Address.from_private_key(params["private_key"])["base58"]
 
+                        # Initiate wallet for bonus payments
                         bonus_tron = Tron(**params)
+
+                        # Send funds from bonus wallet to user address
                         send_user = bonus_tron.trx.send(from_hex, float(winnings_trx))
                     else:
-                        # Send funds from bot address to user address
+                        # Send funds from bot wallet to user address
                         send_user = self.get_tron().trx.send(from_hex, float(winnings_trx))
 
                     # An error was returned
@@ -647,7 +652,7 @@ class Bet(TrxBetBotPlugin):
             except Exception as e:
                 logging.error(f"Job {bet_addr58} - Couldn't send outcome message: {e}")
 
-        if not bet.bet_won:
+        if bet.bet_won == "false":
             if message:
                 if bot.get_chat(update.message.chat_id).type == Chat.PRIVATE:
                     remove_time = self.config.get("private_remove_after")
