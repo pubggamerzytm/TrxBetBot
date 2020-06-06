@@ -3,7 +3,5 @@
     "category": "Tipping",
     "description": "Tip last active HashLotto users",
     "number_of_users": 50,
-    "minus": 7,
-    "public_remove_after": 60,
-    "private_remove_after": 300
+    "minus": 7
 }
