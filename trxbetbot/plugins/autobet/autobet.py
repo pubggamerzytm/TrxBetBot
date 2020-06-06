@@ -38,7 +38,7 @@ class Autobet(TrxBetBotPlugin):
                 self.config.get("interval"),
                 first=randrange(0, 60),
                 context=context,
-                name=self.get_name() + autobet[0])
+                name=f"{self.get_name()}_{autobet[0]}")
 
         return self
 
@@ -53,9 +53,15 @@ class Autobet(TrxBetBotPlugin):
             if self.execute_sql(sql, usr_id)["data"][0][0] == 1:
                 sql = self.get_resource("delete_autobet.sql")
                 self.execute_sql(sql, update.effective_user.id)
+                logging.info(f"Removed {self.get_name()} DB entry for user ID {usr_id}")
 
-                job = self.get_job(name=self.get_name() + str(usr_id))
-                if job: job.schedule_removal()
+                job = self.get_job(name=f"{self.get_name()}_{str(usr_id)}")
+
+                if job:
+                    job.schedule_removal()
+                    logging.info(f"Removed {self.get_name()} job for user ID {usr_id}")
+                else:
+                    logging.warning(f"No {self.get_name()} job for user ID {usr_id}")
 
                 msg = f"{emo.INFO} Stopped automatic betting"
             else:
@@ -79,25 +85,33 @@ class Autobet(TrxBetBotPlugin):
             update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             return
 
-        logging.info(f"Update: {update}")
-
         # Identify this as an autobet and add the amount of TRX to bet
         update.effective_message.caption = f"{self.AUTOBET}"
 
         updt = zlib.compress(pickle.dumps(update))
 
-        # Check if there is already an auto-bet for this user
+        # Check if there is already an auto-bet for this user ...
         sql = self.get_resource("exists_autobet.sql")
+
+        # ... if yes, update it
         if self.execute_sql(sql, usr_id)["data"][0][0] == 1:
             sql = self.get_resource("update_autobet.sql")
             self.execute_sql(sql, bet_chars, bet_amount, updt, usr_id)
 
+            logging.info(f"Updated {self.get_name()} for user ID {usr_id} - "
+                         f"chars {bet_chars} - amount {bet_amount}")
+
             msg = f"{emo.INFO} Auto-Betting data for {self.get_name()} updated..."
             update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             return
+
+        # ... if not, insert it
         else:
             sql = self.get_resource("insert_autobet.sql")
             self.execute_sql(sql, usr_id, bet_chars, bet_amount, updt)
+
+            logging.info(f"Inserted {self.get_name()} for user ID {usr_id} - "
+                         f"chars {bet_chars} - amount {bet_amount}")
 
         context = {
             "update": update,
@@ -108,14 +122,14 @@ class Autobet(TrxBetBotPlugin):
         msg = f"{emo.MONEY_FACE} Starting Auto-Betting..."
         update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
 
-        logging.info("Creating repeating job for auto-bet")
+        logging.info(f"Creating repeating job for {self.get_name()} - {update}")
 
         # Repeating job for auto-send
         self.repeat_job(
             self.auto_bet,
             self.config.get("interval"),
             context=context,
-            name=self.get_name() + str(usr_id))
+            name=f"{self.get_name()}_{str(usr_id)}")
 
     def auto_bet(self, bot, job):
         update = job.context["update"]
@@ -125,5 +139,6 @@ class Autobet(TrxBetBotPlugin):
         # Find '/bet' plugin
         for plugin in self._tgb.plugins:
             if plugin.get_name() == "bet":
+                logging.info(f"Execute job {job.name} - chars {bet_chars} - amount {bet_amount}")
                 plugin.execute(bot, update, args=[bet_chars, bet_amount])
                 return

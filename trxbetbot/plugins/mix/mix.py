@@ -11,11 +11,10 @@ from telegram import ParseMode, Chat
 from datetime import datetime, timedelta
 from trxbetbot.plugin import TrxBetBotPlugin
 from trxbetbot.tronscan import Tronscan
+from ..automix.automix import Automix
 
 
 class Mix(TrxBetBotPlugin):
-
-    AUTOMIX = "automix"
 
     _WON_DIR = "won"
     _LOST_DIR = "lost"
@@ -37,6 +36,21 @@ class Mix(TrxBetBotPlugin):
     @TrxBetBotPlugin.threaded
     @TrxBetBotPlugin.send_typing
     def execute(self, bot, update, args):
+        if self.is_automix(update):
+            sql = self.get_resource("select_automix.sql", plugin="automix")
+            res = self.execute_sql(sql, update.effective_user.id, plugin="automix")
+
+            if not res["success"] or not res["data"]:
+                msg = f"{emo.ERROR} Automix stopped. No data for user ID {update.effective_user.id}."
+                self.if_automix_then_stop(update, msg)
+                update.message.reply_text(msg)
+                return
+
+            auto_chars = res["data"][0][1]
+            auto_amount = str(res["data"][0][2])
+
+            args = [auto_chars, auto_amount]
+
         if len(args) != 2:
             update.message.reply_text(self.get_usage(), parse_mode=ParseMode.MARKDOWN)
             return
@@ -45,8 +59,8 @@ class Mix(TrxBetBotPlugin):
 
         # Check if user provided any valid characters
         if len(choice) == 0:
-            msg = f"{emo.ERROR} You did not provide any valid characters to bet on. " \
-                  f"Allowed are: `{self._VALID_CHARS}`"
+            msg = f"{emo.ERROR} No valid characters provided. Allowed are: `{self._VALID_CHARS}`"
+            self.if_automix_then_stop(update, msg)
             update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             return
 
@@ -63,24 +77,28 @@ class Mix(TrxBetBotPlugin):
 
         if not str(len(choice)) in preset:
             msg = f"{emo.ERROR} You need to provide 1-{len(preset)} characters and not {len(choice)}"
-            update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
+            self.if_automix_then_stop(update, msg)
+            update.message.reply_text(msg)
             return
 
         preset = preset[str(len(choice))]
 
+        # Check if preset configuration has all needed values
         if "min_trx" not in preset or "max_trx" not in preset or "leverage" not in preset:
             msg = f"{emo.ERROR} Wrong configuration in preset: {preset}"
-            update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
+            self.if_automix_then_stop(update, msg)
+            update.message.reply_text(msg)
             logging.error(msg)
             self.notify(msg)
             return
 
-        logging.info(f"Update: {update}")
-
+        # Generate new betting address
         tron = Tron()
         account = tron.create_account
         tron.private_key = account.private_key
         tron.default_address = account.address.base58
+
+        addr = account.address.base58
 
         # Check if generated address is valid
         if not bool(tron.isAddress(account.address.hex)):
@@ -93,19 +111,11 @@ class Mix(TrxBetBotPlugin):
                      "addr_hex": account.address.hex,
                      "addr_base58": account.address.base58}
 
-        logging.info(f"Update: {update}")
-        logging.info(f"TRX address created {generated}")
+        logging.info(f"{addr} TRX address created {generated} - {update}")
 
         # Save generated address to database
         sql = self.get_resource("insert_address.sql")
         self.execute_sql(sql, account.address.base58, account.private_key)
-
-        """ Calculate chance to win
-        chance = 1
-        for i in range(len(choice)):
-            chance *= 1 / len(self._VALID_CHARS)
-        chance *= 100
-        """
 
         leverage = preset["leverage"]
 
@@ -113,6 +123,7 @@ class Mix(TrxBetBotPlugin):
         sql = self.get_resource("insert_bet.sql")
         self.execute_sql(sql, account.address.base58, choice, update.effective_user.id)
 
+        # Get min and max amounts for this bet from config
         min_trx = preset["min_trx"]
         max_trx = preset["max_trx"]
 
@@ -120,132 +131,108 @@ class Mix(TrxBetBotPlugin):
         sql = self.get_global_resource("select_address.sql")
         res = self.execute_global_sql(sql, update.effective_user.id)
 
-        # --- Start auto-bet logic - send TRX from user wallet to generated wallet ---
+        # Load message for user
+        betting_msg = self.get_resource("betting.md")
+        betting_msg = betting_msg.replace("{{choice}}", choice)
+        betting_msg = betting_msg.replace("{{factor}}", str(leverage))
+        betting_msg = betting_msg.replace("{{chars}}", str(len(choice)))
 
         if self.is_automix(update):
-            logging.info("Bet is an auto-mix")
+            msg = betting_msg.replace("{{state}}", f"{emo.WAIT} AUTO-MIX: Sending TRX from your wallet...")
+        else:
+            msg = betting_msg.replace("{{state}}", f"{emo.WAIT} Sending TRX from your wallet...")
 
-            msg = self.get_resource("betting_automix.md")
-            msg = msg.replace("{{choice}}", choice)
-            msg = msg.replace("{{chars}}", str(len(choice)))
-            msg = msg.replace("{{factor}}", str(leverage))
-            msg = msg.replace("{{min}}", str(min_trx))
-            msg = msg.replace("{{max}}", str(max_trx))
-            msg1 = update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
+        # Send betting message to user
+        message = update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
 
-            logging.info(msg.replace("\n", " "))
+        msg = msg.replace("\n", " ")
+        logging.info(f"{addr} {msg}")
 
-            msg = f"{emo.WAIT} AUTO-MIX: Sending TRX from your wallet..."
-            msg2 = update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
+        manual_mode = False
 
-            logging.info(msg.replace("\n", " "))
+        # User has a bot generated wallet
+        if res["success"] and res["data"]:
+            logging.info(f"{addr} Wallet for auto-send: {res['data']}")
 
-            if not res["success"]:
-                msg = f"{emo.ERROR} Auto-mix stopped. Your TRX wallet could not be determined."
-                update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
-                self.get_job(update.effective_user.id).schedule_removal()
-                logging.error(res)
-                return
-
-            logging.info(f"Users wallet used for auto-mix: {res['data']}")
-
-            # Users existing wallet used for auto-mix
+            # Users existing wallet used for auto-send
             from_user = Tron()
             from_user.private_key = res["data"][0][2]
             from_user.default_address = res["data"][0][1]
 
-            sql = self.get_resource("select_automix.sql", plugin="automix")
-            res = self.execute_sql(sql, update.effective_user.id, plugin="automix")
+            # Get balance (in "Sun") of users wallet address
+            balance = from_user.trx.get_balance()
+            trx_balance = from_user.fromSun(balance)
 
-            if not res["success"]:
-                msg = f"{emo.ERROR} Auto-mix stopped. Couldn't read data from DB."
-                update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
-                self.get_job(update.effective_user.id).schedule_removal()
-                logging.error(res)
-                return
+            logging.info(f"{addr} TRX Balance - Current: {trx_balance} - Needed: {amount + con.TRX_FEE}")
 
-            bet_amount = float(res["data"][0][2])
+            # Not enough balance for auto-send
+            if trx_balance < (amount + con.TRX_FEE):
+                # Bet is an auto-bet
+                if self.is_automix(update):
+                    msg = f"{emo.ERROR} Automix stopped. Not enough balance."
+                    self.if_automix_then_stop(update, f"{addr} {msg}")
+                    update.message.reply_text(msg)
+                    return
+                # Bet is a manually started bet
+                else:
+                    logging.warning(f"{addr} Couldn't auto-send. Not enough balance.")
+                    manual_mode = True
 
-            # Send determined bet amount from user wallet to generated wallet
-            send = from_user.trx.send(tron.default_address.hex, bet_amount)
-            logging.info(f"Auto-mix {bet_amount} TRX - {send}")
-
-            if "code" in send and "message" in send:
-                msg = f"{emo.ERROR} Auto-mix stopped. Not possible to send {bet_amount} TRX: {send['message']}"
-                update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
-                self.get_job(update.effective_user.id).schedule_removal()
-                logging.error(msg)
-                return
-
-            msg = f"{emo.DONE} AUTO-MIX: Successfully sent `{bet_amount}` TRX to `{account.address.base58}`"
-            msg2.edit_text(msg, parse_mode=ParseMode.MARKDOWN)
-
-            logging.info(msg.replace("\n", " "))
-
-        # --- Start normal logic - either auto-send if possible or manual-send ---
-
-        else:
-            manual_send = False
-
+            # Enough balance for auto-send
             try:
-                if not res["success"]:
-                    raise Exception(f"Users TRX wallet could not be determined: {res}")
+                # Send bet amount from user wallet to generated wallet
+                send = from_user.trx.send(tron.default_address.hex, amount)
 
-                from_user = Tron()
-                from_user.private_key = res["data"][0][2]
-                from_user.default_address = res["data"][0][1]
+                # Transaction didn't went through
+                if "code" in send and "message" in send:
+                    if self.is_automix(update):
+                        msg = f"{emo.ERROR} Automix stopped. Can't send {amount} TRX: {send['message']}"
+                        self.if_automix_then_stop(update, f"{addr} {msg}")
+                        update.message.reply_text(msg)
+                        return
+                    else:
+                        logging.warning(f"{addr} Couldn't auto-send: {send}")
+                        manual_mode = True
+                else:
+                    if self.is_automix(update):
+                        msg = f"{emo.DONE} AUTO-MIX: Successfully sent `{amount}` TRX to `{addr}`"
+                    else:
+                        msg = f"{emo.DONE} Successfully sent `{amount}` TRX to `{addr}`"
 
-                # Get balance (in "Sun") of generated address
-                balance = from_user.trx.get_balance()
-                trx_balance = from_user.fromSun(balance)
-
-                if trx_balance < (amount + con.TRX_FEE):
-                    raise Exception(f"Not enough balance for autosend: {trx_balance} TRX")
+                    logging.info(f"{addr} {msg} - {send}")
+                    betting_msg = betting_msg.replace("{{state}}", msg)
+                    message.edit_text(betting_msg, parse_mode=ParseMode.MARKDOWN)
             except Exception as e:
-                logging.warning(f"Couldn't activate autosend: {e}")
-                manual_send = True
+                if self.is_automix(update):
+                    msg = f"{emo.ERROR} Automix stopped. Can't send {amount} TRX: {e}"
+                    self.if_automix_then_stop(update, f"{addr} {msg}")
+                    update.message.reply_text(msg)
+                    return
+                else:
+                    logging.warning(f"{addr} Couldn't auto-send: {e}")
+                    manual_mode = True
 
-            if manual_send:
-                msg = self.get_resource("betting_manual.md")
+        # User doesn't have a bot generated wallet
+        else:
+            # Bet is an auto-bet
+            if self.is_automix(update):
+                msg = f"{emo.ERROR} Automix stopped. Generate a wallet first with /start"
+                self.if_automix_then_stop(update, f"{addr} {msg}")
+                update.message.reply_text(msg)
+                return
             else:
-                msg = self.get_resource("betting.md")
+                logging.warning(f"{addr} Couldn't auto-send: User doesn't have a wallet")
+                manual_mode = True
 
-            msg = msg.replace("{{choice}}", choice)
-            msg = msg.replace("{{chars}}", str(len(choice)))
-            msg = msg.replace("{{factor}}", str(leverage))
-            msg = msg.replace("{{min}}", str(min_trx))
-            msg = msg.replace("{{max}}", str(max_trx))
-            msg1 = update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
+        if manual_mode:
+            msg = "*Wallet balance not sufficient*. "
+            msg += f"Send between *{min_trx}* and *{max_trx}* TRX to following address:\n\n`{addr}`"
+            betting_msg = betting_msg.replace("{{state}}", msg)
 
-            logging.info(msg.replace("\n", ""))
+            message.edit_text(betting_msg, parse_mode=ParseMode.MARKDOWN)
 
-            if manual_send:
-                msg = f"`{account.address.base58}`"
-            else:
-                msg = f"{emo.WAIT} Sending TRX from your wallet..."
-
-            msg2 = update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
-
-            logging.info(msg.replace("\n", ""))
-
-            if not manual_send:
-                try:
-                    # Send bet amount from user wallet to generated wallet
-                    send = from_user.trx.send(tron.default_address.hex, amount)
-                    logging.info(f"Sent {amount} TRX - {send}")
-
-                    if "code" in send and "message" in send:
-                        raise Exception(send['message'])
-
-                    msg = f"{emo.DONE} Successfully sent `{amount}` TRX to `{account.address.base58}`"
-                    msg2.edit_text(msg, parse_mode=ParseMode.MARKDOWN)
-
-                    logging.info(msg.replace("\n", " "))
-                except Exception as e:
-                    msg = f"{emo.ERROR} Not possible to automatically send TRX. " \
-                          f"Please send manually to this address: `{account.address.base58}`"
-                    update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
-                    logging.error(f"Not possible to autosend TRX: {e}")
+            betting_msg = betting_msg.replace("\n", " ")
+            logging.info(f"{addr} {betting_msg}")
 
         # --- General logic ---
 
@@ -258,20 +245,40 @@ class Mix(TrxBetBotPlugin):
             "preset": preset,
             "update": update,
             "start": time.time(),
-            "msg1": msg1,
-            "msg2": msg2
+            "message": message
         }
 
         self.repeat_job(self.scan_balance, check, first=first, context=context)
 
-        logging.info(f"Initiated repeating job for {account.address.base58}")
+        logging.info(f"{addr} Initiated repeating job")
 
     def is_automix(self, update):
         caption = update.effective_message.caption
-        if caption and caption == self.AUTOMIX:
+        if caption and caption == Automix.AUTOMIX:
             return True
         else:
             return False
+
+    def if_automix_then_stop(self, update, msg):
+        if self.is_automix(update):
+            usr_id = update.effective_user.id
+
+            # Get repeating job
+            job = self.get_job(f"{Automix.AUTOMIX}_{usr_id}")
+
+            # Remove job
+            if job:
+                job.schedule_removal()
+                logging.info(f"Removed job {job.name}: {msg}")
+            else:
+                logging.warning(msg)
+
+            # Remove DB entry
+            sql = self.get_resource("exists_automix.sql", plugin="automix")
+            if self.execute_sql(sql, usr_id, plugin="automix")["data"][0][0] == 1:
+                sql = self.get_resource("delete_automix.sql", plugin="automix")
+                self.execute_sql(sql, update.effective_user.id, plugin="automix")
+                logging.info(f"Removed auto{self.get_name()} DB entry for user ID {usr_id}: {msg}")
 
     def _remove_losses(self, bot, job):
         param_lst = job.context.split("_")
@@ -299,13 +306,10 @@ class Mix(TrxBetBotPlugin):
         choice = job.context["choice"]
         preset = job.context["preset"]
         update = job.context["update"]
+        betting_msg = job.context["message"]
 
         bet_addr = tron.default_address
         bet_addr58 = bet_addr["base58"]
-
-        # Messages that bot posted after user executed command
-        msg1 = job.context["msg1"]
-        msg2 = job.context["msg2"]
 
         # Read data for this bet from database
         bet = DBBet(self, bet_addr58, choice, update.effective_user.id)
@@ -321,8 +325,8 @@ class Mix(TrxBetBotPlugin):
             job.schedule_removal()
             logging.info(f"Job {bet_addr58} - Scheduled job for removal")
 
-            # Remove messages after betting address isn't valid anymore
-            self.remove_messages(bot, msg1, msg2, bet_addr58)
+            # Remove message after betting address isn't valid anymore
+            self.remove_message(bot, betting_msg, bet_addr58)
 
             # If there was a balance...
             if bet.usr_amount and bet.usr_amount != 0:
@@ -422,6 +426,9 @@ class Mix(TrxBetBotPlugin):
 
             logging.info(f"Job {bet_addr58} - {msg}")
 
+            self.if_automix_then_stop(update, msg)
+            logging.info(f"Job {bet_addr58} - Automix stopped. TRX amount out of min / max boundaries")
+
             try:
                 # Send funds from betting address to original address
                 send = tron.trx.send(from_hex, amo)
@@ -443,7 +450,7 @@ class Mix(TrxBetBotPlugin):
             job.schedule_removal()
             logging.info(f"Job {bet_addr58} - Scheduled job for removal")
 
-            self.remove_messages(bot, msg1, msg2, bet_addr58)
+            self.remove_message(bot, betting_msg, bet_addr58)
             return
 
         # Check if we already know the block
@@ -665,8 +672,8 @@ class Mix(TrxBetBotPlugin):
                         datetime.now() + timedelta(seconds=remove_time),
                         context=f"{message.chat_id}_{message.message_id}")
 
-        # Remove messages after betting address isn't valid anymore
-        self.remove_messages(bot, msg1, msg2, bet_addr58)
+        # Remove message after betting address isn't valid anymore
+        self.remove_message(bot, betting_msg, bet_addr58)
 
         # Inform admins that user won with second chance
         if second_chance_win:
@@ -697,19 +704,14 @@ class Mix(TrxBetBotPlugin):
                 return False
         return True
 
-    def remove_messages(self, bot, msg1, msg2, bet_addr58):
+    def remove_message(self, bot, message, bet_addr58):
         try:
-            chat_id1 = msg1.chat_id
-            msg_id1 = msg1.message_id
-            bot.delete_message(chat_id=chat_id1, message_id=msg_id1)
-            logging.info(f"Job {bet_addr58} - Removed betting message 1")
-
-            chat_id2 = msg2.chat_id
-            msg_id2 = msg2.message_id
-            bot.delete_message(chat_id=chat_id2, message_id=msg_id2)
-            logging.info(f"Job {bet_addr58} - Removed betting message 2")
+            chat_id = message.chat_id
+            msg_id = message.message_id
+            bot.delete_message(chat_id=chat_id, message_id=msg_id)
+            logging.info(f"Job {bet_addr58} - Removed betting message")
         except Exception as e:
-            logging.warning(f"Job {bet_addr58} - Couldn't remove message: {e}")
+            logging.warning(f"Job {bet_addr58} - Couldn't remove betting message: {e}")
 
 
 class DBBet:
