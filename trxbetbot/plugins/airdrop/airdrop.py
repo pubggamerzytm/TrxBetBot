@@ -143,7 +143,18 @@ class Airdrop(TrxBetBotPlugin):
 
         # Send TRX share to bot wallet
         bot_addr = self.get_tron().default_address.hex
-        tron.trx.send(bot_addr, bot_amount)
+
+        try:
+            send_bot = tron.trx.send(bot_addr, bot_amount)
+
+            # An error was returned
+            if "code" in send_bot and "message" in send_bot:
+                raise Exception(send_bot["message"])
+
+            logging.info(f"Sent share of {bot_amount} TRX to bot wallet {bot_addr} - {send_bot}")
+        except Exception as e:
+            logging.error(f"Not possible to send {bot_amount} TRX to bot wallet: {e}")
+            self.notify(f"Airdrop - Not possible to receive {bot_amount} TRX: {e}")
 
         users_str = str()
 
