@@ -3,5 +3,5 @@
     "description": "Automatically place a bet for /win",
     "category": "Automatic Betting",
     "private": true,
-    "interval": 90
+    "interval": 30
 }
