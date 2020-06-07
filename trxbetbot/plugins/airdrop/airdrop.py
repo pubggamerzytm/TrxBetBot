@@ -52,7 +52,7 @@ class Airdrop(TrxBetBotPlugin):
 
         # Select more data sets than we need to make sure that after
         # filtering out same users we still have the needed amount of data
-        bet_count = nr_users * 10
+        bet_count = nr_users * 50
 
         sql = self.get_resource("select_last.sql")
         res_bet = self.execute_sql(sql, min_sun, bet_count, plugin="bet")
