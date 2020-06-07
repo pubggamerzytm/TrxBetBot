@@ -47,12 +47,15 @@ class Airdrop(TrxBetBotPlugin):
             update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             return
 
+        min_trx = self.config.get("min_trx")
+        min_sun = self.get_tron().toSun(min_trx)
+
         # Select more data sets than we need to make sure that after
         # filtering out same users we still have the needed amount of data
         bet_count = nr_users * 10
 
         sql = self.get_resource("select_last.sql")
-        res_bet = self.execute_sql(sql, bet_count, plugin="bet")
+        res_bet = self.execute_sql(sql, min_sun, bet_count, plugin="bet")
 
         if not res_bet["success"]:
             msg = f"{emo.ERROR} Couldn't retrieve last active users from /bet"
@@ -61,7 +64,7 @@ class Airdrop(TrxBetBotPlugin):
             self.notify(msg)
             return
 
-        res_win = self.execute_sql(sql, bet_count, plugin="win")
+        res_win = self.execute_sql(sql, min_sun, bet_count, plugin="win")
 
         if not res_win["success"]:
             msg = f"{emo.ERROR} Couldn't retrieve last active users from /win"
@@ -70,7 +73,7 @@ class Airdrop(TrxBetBotPlugin):
             self.notify(msg)
             return
 
-        res_mix = self.execute_sql(sql, bet_count, plugin="mix")
+        res_mix = self.execute_sql(sql, min_sun, bet_count, plugin="mix")
 
         if not res_mix["success"]:
             msg = f"{emo.ERROR} Couldn't retrieve last active users from /mix"
@@ -97,6 +100,12 @@ class Airdrop(TrxBetBotPlugin):
                 break
 
         logging.info(f"User IDs to tip: {user_ids}")
+
+        if len(user_ids) < 1:
+            msg = f"{emo.ERROR} Airdrop not possible. Couldn't identify any users."
+            update.message.reply_text(msg)
+            logging.error(msg)
+            return
 
         fees = con.TRX_FEE * (len(user_ids) + 1)
         total = float(amount) - fees
