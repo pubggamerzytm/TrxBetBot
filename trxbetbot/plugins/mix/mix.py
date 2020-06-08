@@ -76,9 +76,9 @@ class Mix(TrxBetBotPlugin):
         preset = self.config.get("preset")
 
         if not str(len(choice)) in preset:
-            msg = f"{emo.ERROR} You need to provide 1-{len(preset)} characters and not {len(choice)}"
+            msg = f"{emo.ERROR} Betting on {len(choice)} characters not possible - {preset}"
             self.if_automix_then_stop(update, msg)
-            update.message.reply_text(msg)
+            update.message.reply_text(self.get_usage(), parse_mode=ParseMode.MARKDOWN)
             return
 
         preset = preset[str(len(choice))]
