@@ -104,6 +104,36 @@ class Bet(TrxBetBotPlugin):
 
         logging.info(f"{addr} TRX address created {generated} - {update}")
 
+        # Default value for delaying a bet
+        delay = 0
+
+        # Check last bet time and make sure that current
+        # bet will be after 'bet_delay' time from config
+        if not self.is_autobet(update):
+            sql = self.get_resource("select_last_usr_bet.sql")
+            res = self.execute_sql(sql, update.effective_user.id)
+
+            uid = update.effective_user.id
+
+            # No last bet for user found
+            if not res["success"] or not res["data"]:
+                msg = f"{addr} Couldn't retrieve last bet for user {uid}. Delay = {delay}"
+                logging.warning(msg)
+
+            # Last bet for user found
+            else:
+                last_bet_date = datetime.strptime(res["data"][0][0], "%Y-%m-%d %H:%M:%S")
+                bet_delay = res["data"][0][1] if res["data"][0][1] else 0
+
+                default_delay = self.config.get("bet_delay")
+                delta = datetime.utcnow() - last_bet_date
+
+                logging.info(f"{addr} Last bet for user {uid} was on {last_bet_date}. Delta is {delta}")
+
+                if delta < timedelta(seconds=default_delay):
+                    delay = bet_delay + default_delay
+                    logging.info(f"{addr} Delay set to {delay} seconds")
+
         # Save generated address to database
         sql = self.get_resource("insert_address.sql")
         self.execute_sql(sql, account.address.base58, account.private_key)
@@ -111,30 +141,9 @@ class Bet(TrxBetBotPlugin):
         choice = "".join(sorted(chars))
         leverage = self._LEVERAGE[len(chars)]
 
-        # Check last bet time and make sure that current
-        # bet will be after 'bet_delay' time from config
-        if not self.is_autobet(update):
-            delay = 0
-
-            sql = self.get_resource("select_last_usr_bet.sql")
-            res = self.execute_sql(sql, update.effective_user.id)
-
-            if not res["success"] or not res["data"]:
-                msg = f"Couldn't retrieve last bet for user {update.effective_user.id}. Delay = {delay}"
-                logging.warning(msg)
-            else:
-                last_bet_time = res["data"][0][11]
-                last = datetime.strptime(last_bet_time, "%Y-%m-%d %H:%M:%S")
-
-                delta = datetime.now() - last
-                delay = self.config.get("bet_delay")
-
-                if delta < delay:
-                    time.sleep(delay)
-
         # Save bet details to database
         sql = self.get_resource("insert_bet.sql")
-        self.execute_sql(sql, account.address.base58, choice, update.effective_user.id)
+        self.execute_sql(sql, account.address.base58, choice, update.effective_user.id, delay)
 
         # Get min and max amounts for this bet from config
         min_trx = self.config.get("min_trx")
@@ -143,6 +152,14 @@ class Bet(TrxBetBotPlugin):
         # Get users wallet to send bet TRX from
         sql = self.get_global_resource("select_address.sql")
         res = self.execute_global_sql(sql, update.effective_user.id)
+
+        message = None
+
+        if delay > 0:
+            msg = f"{emo.WAIT} Bet will start in {delay} seconds..."
+            message = update.message.reply_text(msg)
+            logging.info(f"{addr} {msg}")
+            time.sleep(delay)
 
         # Load message for user
         betting_msg = self.get_resource("betting.md")
@@ -155,7 +172,10 @@ class Bet(TrxBetBotPlugin):
             msg = betting_msg.replace("{{state}}", f"{emo.WAIT} Sending TRX from your wallet...")
 
         # Send betting message to user
-        message = update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
+        if message:
+            message = message.edit_text(msg, parse_mode=ParseMode.MARKDOWN)
+        else:
+            message = update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
 
         msg = msg.replace("\n", " ")
         logging.info(f"{addr} {msg}")

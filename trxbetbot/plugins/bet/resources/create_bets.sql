@@ -12,5 +12,6 @@ CREATE TABLE bets (
     pay_trx_id TEXT,
 	date_time DATETIME DEFAULT CURRENT_TIMESTAMP,
 	rtn_trx_id TEXT,
+	delay INTEGER,
 	FOREIGN KEY(bet_address) REFERENCES addresses(address)
 )
