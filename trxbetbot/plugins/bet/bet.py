@@ -111,6 +111,22 @@ class Bet(TrxBetBotPlugin):
         choice = "".join(sorted(chars))
         leverage = self._LEVERAGE[len(chars)]
 
+        # Check last bet time and make sure that current
+        # bet will be after 'bet_delay' time from config
+        if not self.is_autobet(update):
+            delay = 0
+
+            sql = self.get_resource("select_last_usr_bet.sql")
+            res = self.execute_sql(sql, update.effective_user.id)
+
+            if not res["success"] or not res["data"]:
+                msg = f"Couldn't retrieve last bet for user {update.effective_user.id}. Delay = {delay}"
+                logging.warning(msg)
+            else:
+                delay = self.config.get("bet_delay")
+                last_bet_time = res["data"][0][11]
+                # TODO: Check current time with last_bet_time. If delta > delay --> bet ok. If not, wait delay
+
         # Save bet details to database
         sql = self.get_resource("insert_bet.sql")
         self.execute_sql(sql, account.address.base58, choice, update.effective_user.id)
