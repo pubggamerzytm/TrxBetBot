@@ -123,9 +123,14 @@ class Bet(TrxBetBotPlugin):
                 msg = f"Couldn't retrieve last bet for user {update.effective_user.id}. Delay = {delay}"
                 logging.warning(msg)
             else:
-                delay = self.config.get("bet_delay")
                 last_bet_time = res["data"][0][11]
-                # TODO: Check current time with last_bet_time. If delta > delay --> bet ok. If not, wait delay
+                last = datetime.strptime(last_bet_time, "%Y-%m-%d %H:%M:%S")
+
+                delta = datetime.now() - last
+                delay = self.config.get("bet_delay")
+
+                if delta < delay:
+                    time.sleep(delay)
 
         # Save bet details to database
         sql = self.get_resource("insert_bet.sql")
