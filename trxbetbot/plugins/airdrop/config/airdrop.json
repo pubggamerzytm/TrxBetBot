@@ -4,5 +4,6 @@
     "description": "Tip last active HashLotto users",
     "number_of_users": 50,
     "min_trx": 5,
-    "minus": 7
+    "minus": 7,
+    "direct_msg": true
 }

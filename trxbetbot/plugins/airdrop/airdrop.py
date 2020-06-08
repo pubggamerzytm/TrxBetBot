@@ -191,6 +191,15 @@ class Airdrop(TrxBetBotPlugin):
 
                 users_str += username + ", "
 
+                if self.config.get("direct_msg"):
+                    try:
+                        # Send direct message to user that received airdrop
+                        msg = f"Hey {usr_data[2]} you got an airdrop of {usr_amount} TRX from user {tipping_usr}!"
+                        bot.send_message(user_id, msg, parse_mode=ParseMode.MARKDOWN)
+                    except Exception as e:
+                        msg = f"Not possible to notify user {username}({user_id}) about airdrop of {usr_amount} TRX"
+                        logging.warning(f"{msg}: {e}")
+
                 logging.info(f"Airdropped {usr_amount} TRX to user {username} ({user_id}) at address {address}")
             except Exception as ex:
                 msg = f"{emo.ERROR} Not possible to airdrop {usr_amount} TRX to user {username} ({user_id})"
