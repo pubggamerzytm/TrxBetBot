@@ -179,38 +179,39 @@ class Win(TrxBetBotPlugin):
                     manual_mode = True
 
             # Enough balance for auto-send
-            try:
-                # Send bet amount from user wallet to generated wallet
-                send = from_user.trx.send(tron.default_address.hex, amount)
+            else:
+                try:
+                    # Send bet amount from user wallet to generated wallet
+                    send = from_user.trx.send(tron.default_address.hex, amount)
 
-                # Transaction didn't went through
-                if "code" in send and "message" in send:
+                    # Transaction didn't went through
+                    if "code" in send and "message" in send:
+                        if self.is_autowin(update):
+                            msg = f"{emo.ERROR} Autowin stopped. Can't send {amount} TRX: {send['message']}"
+                            self.if_autowin_then_stop(update, f"{addr} {msg}")
+                            update.message.reply_text(msg)
+                            return
+                        else:
+                            logging.warning(f"{addr} Couldn't auto-send: {send}")
+                            manual_mode = True
+                    else:
+                        if self.is_autowin(update):
+                            msg = f"{emo.DONE} AUTO-WIN: Successfully sent `{amount}` TRX to `{addr}`"
+                        else:
+                            msg = f"{emo.DONE} Successfully sent `{amount}` TRX to `{addr}`"
+
+                        logging.info(f"{addr} {msg} - {send}")
+                        betting_msg = betting_msg.replace("{{state}}", msg)
+                        message.edit_text(betting_msg, parse_mode=ParseMode.MARKDOWN)
+                except Exception as e:
                     if self.is_autowin(update):
-                        msg = f"{emo.ERROR} Autowin stopped. Can't send {amount} TRX: {send['message']}"
+                        msg = f"{emo.ERROR} Autowin stopped. Can't send {amount} TRX: {e}"
                         self.if_autowin_then_stop(update, f"{addr} {msg}")
                         update.message.reply_text(msg)
                         return
                     else:
-                        logging.warning(f"{addr} Couldn't auto-send: {send}")
+                        logging.warning(f"{addr} Couldn't auto-send: {e}")
                         manual_mode = True
-                else:
-                    if self.is_autowin(update):
-                        msg = f"{emo.DONE} AUTO-WIN: Successfully sent `{amount}` TRX to `{addr}`"
-                    else:
-                        msg = f"{emo.DONE} Successfully sent `{amount}` TRX to `{addr}`"
-
-                    logging.info(f"{addr} {msg} - {send}")
-                    betting_msg = betting_msg.replace("{{state}}", msg)
-                    message.edit_text(betting_msg, parse_mode=ParseMode.MARKDOWN)
-            except Exception as e:
-                if self.is_autowin(update):
-                    msg = f"{emo.ERROR} Autowin stopped. Can't send {amount} TRX: {e}"
-                    self.if_autowin_then_stop(update, f"{addr} {msg}")
-                    update.message.reply_text(msg)
-                    return
-                else:
-                    logging.warning(f"{addr} Couldn't auto-send: {e}")
-                    manual_mode = True
 
         # User doesn't have a bot generated wallet
         else:
