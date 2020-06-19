@@ -14,6 +14,7 @@ from trxbetbot.tronscan import Tronscan
 from ..autobet.autobet import Autobet
 
 
+# TODO: Handle cases: 1) If balance not sufficient, stop. 2) If no own wallet and user disabled or blocked bot, stop
 class Bet(TrxBetBotPlugin):
 
     _WON_DIR = "won"
@@ -66,6 +67,7 @@ class Bet(TrxBetBotPlugin):
             amount = float(amount)
         except:
             msg = f"{emo.ERROR} Provide a valid TRX amount"
+            self.if_autobet_then_stop(update, msg)
             update.message.reply_text(msg)
             return
 
