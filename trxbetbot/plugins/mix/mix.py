@@ -55,7 +55,7 @@ class Mix(TrxBetBotPlugin):
             update.message.reply_text(self.get_usage(), parse_mode=ParseMode.MARKDOWN)
             return
 
-        choice = "".join(self.remove_unwanted(args[0]))
+        choice = "".join(self.remove_unwanted(args[0].lower()))
 
         # Check if user provided any valid characters
         if len(choice) == 0:

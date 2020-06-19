@@ -57,7 +57,7 @@ class Bet(TrxBetBotPlugin):
             update.message.reply_text(self.get_usage(), parse_mode=ParseMode.MARKDOWN)
             return
 
-        chars = set(self.remove_unwanted(args[0]))
+        chars = set(self.remove_unwanted(args[0].lower()))
         count = len(chars)
 
         amount = args[1]
