@@ -410,8 +410,8 @@ class TrxBetBotPlugin:
                 bot.send_chat_action(
                     chat_id=user_id,
                     action=ChatAction.TYPING)
-            except Exception as e:
-                logging.warning(f"{e} - {update}")
+            except:
+                pass
 
             return func(self, bot, update, **kwargs)
         return _send_typing
