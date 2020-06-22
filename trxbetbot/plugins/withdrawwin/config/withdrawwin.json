@@ -1,0 +1,7 @@
+{
+    "handle": "withdrawwin",
+    "category": "Wallet",
+    "description": "Withdraw all WIN from your bot wallet",
+    "public_remove_after": 60,
+    "private_remove_after": 300
+}

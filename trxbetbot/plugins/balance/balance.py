@@ -1,9 +1,12 @@
 import logging
+import trxbetbot.emoji as emo
 
 from tronapi import Tron
+from trxbetbot.trc20 import TRC20
 from telegram import ParseMode, Chat
 from datetime import datetime, timedelta
 from trxbetbot.plugin import TrxBetBotPlugin
+from trxbetbot.trongrid import Trongrid
 
 
 class Balance(TrxBetBotPlugin):
@@ -16,23 +19,30 @@ class Balance(TrxBetBotPlugin):
         sql = self.get_global_resource("select_address.sql")
         res = self.execute_global_sql(sql, user_id)
 
-        if not res["success"]:
-            msg = f"Something went wrong. Please contact @Wikioshi the owner of this bot"
+        if not res["success"] or not res["data"]:
+            msg = f"{emo.ERROR} Something went wrong. Please contact Support"
             update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             return
 
-        data = res["data"]
+        tron = Tron()
 
-        trx_kwargs = dict()
-        trx_kwargs["private_key"] = data[0][2]
-        trx_kwargs["default_address"] = data[0][1]
+        address = res["data"][0][1]
+        account = Trongrid().get_account(address)
 
-        tron = Tron(**trx_kwargs)
+        trx_amount = 0
+        if account and account["data"] and account["data"][0]:
+            trx_amount = tron.fromSun(int(account["data"][0]["balance"]))
 
-        balance = tron.trx.get_balance()
-        amount = tron.fromSun(balance)
+        win_amount = 0
+        if account and account["data"]:
+            for trc20 in account["data"][0]["trc20"]:
+                for trc20_addr, trc20_bal in trc20.items():
+                    if trc20_addr == TRC20().SC["WIN"]:
+                        win_amount = tron.fromSun(int(trc20_bal))
 
-        msg = f"Balance: `{amount}` TRX"
+        msg = f"You wallet balance:\n" \
+              f"`TRX: {trx_amount}`\n" \
+              f"`WIN: {win_amount}`"
         message = update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
 
         if bot.get_chat(update.message.chat_id).type == Chat.PRIVATE:

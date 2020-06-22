@@ -5,8 +5,10 @@ import logging
 import trxbetbot.emoji as emo
 import trxbetbot.constants as con
 
+
 from tronapi import Tron
 from tronapi.main import Address
+from trxbetbot.trc20 import TRC20
 from telegram import ParseMode, Chat
 from datetime import datetime, timedelta
 from trxbetbot.plugin import TrxBetBotPlugin
@@ -14,7 +16,9 @@ from trxbetbot.tronscan import Tronscan
 from ..autobet.autobet import Autobet
 
 
-# TODO: Handle cases: 1) If balance not sufficient, stop. 2) If no own wallet and user disabled or blocked bot, stop
+# TODO: Handle cases:
+#  1) If balance not sufficient, stop.
+#  2) If no own wallet and user disabled or blocked bot, stop
 class Bet(TrxBetBotPlugin):
 
     _WON_DIR = "won"
@@ -727,6 +731,29 @@ class Bet(TrxBetBotPlugin):
                 except Exception as e:
                     error = f"Not possible to notify admin id '{admin}'"
                     logging.error(f"{error}: {e}")
+
+        # Pay out WIN token based on amount of TRX that was wagered
+        try:
+            if self.config.get("win_bonus_active"):
+                current_month = datetime.today().month
+                current_year = datetime.today().year
+
+                for date, trx in self.config.get("win_bonus").items():
+                    bonus_month = date.split(".")[0]
+                    bonus_year = date.split(".")[1]
+
+                    # We found the data that we will use to determine WIN amount to pay
+                    if int(bonus_month) == current_month and int(bonus_year) == current_year:
+                        win_to_pay = int(amo / float(trx))
+
+                        if win_to_pay > 0:
+                            sent_win = TRC20().send("WIN", self.get_tron(), bet.usr_address, win_to_pay)
+                            logging.info(f"Job {bet_addr58} - Payed {win_to_pay} WIN bonus - {sent_win}")
+                        break
+        except Exception as e:
+            msg = f"Job {bet_addr58} - Couldn't payout WIN bonus: {e}"
+            logging.error(msg)
+            self.notify(msg)
 
         logging.info(f"Job {bet_addr58} - Ending job")
 

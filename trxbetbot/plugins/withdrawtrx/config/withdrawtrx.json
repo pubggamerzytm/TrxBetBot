@@ -1,0 +1,7 @@
+{
+    "handle": "withdrawtrx",
+    "category": "Wallet",
+    "description": "Withdraw all TRX from your bot wallet",
+    "public_remove_after": 60,
+    "private_remove_after": 300
+}

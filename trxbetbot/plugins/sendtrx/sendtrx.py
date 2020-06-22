@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from trxbetbot.plugin import TrxBetBotPlugin
 
 
-class Send(TrxBetBotPlugin):
+class Sendtrx(TrxBetBotPlugin):
 
     def __enter__(self):
         if not self.global_table_exists("sent"):
@@ -30,17 +30,17 @@ class Send(TrxBetBotPlugin):
 
         # Check if amount is valid
         try:
-            float(amount)
+            amount = float(amount)
         except:
             msg = f"{emo.ERROR} Provided amount is not valid"
             logging.info(f"{msg} - {update}")
             update.message.reply_text(msg)
             return
 
-        address = args[1]
+        to_address = args[1]
 
         # Check if provided address is valid
-        if not bool(is_address(address)):
+        if not bool(is_address(to_address)):
             msg = f"{emo.ERROR} Provided wallet is not valid"
             logging.info(f"{msg} - {update}")
             update.message.reply_text(msg)
@@ -51,16 +51,18 @@ class Send(TrxBetBotPlugin):
         sql = self.get_global_resource("select_address.sql")
         res = self.execute_global_sql(sql, user_id)
 
-        if not res["success"]:
-            msg = f"Something went wrong. Please contact @Wikioshi the owner of this bot"
+        if not res["success"] or not res["data"]:
+            msg = f"{emo.ERROR} Something went wrong. Please contact Support"
+
+            logging.error(f"{msg}: {res} - {update}")
             update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             return
 
-        data = res["data"]
+        from_address = res["data"][0][1]
 
         trx_kwargs = dict()
-        trx_kwargs["private_key"] = data[0][2]
-        trx_kwargs["default_address"] = data[0][1]
+        trx_kwargs["private_key"] = res["data"][0][2]
+        trx_kwargs["default_address"] = from_address
 
         tron = Tron(**trx_kwargs)
 
@@ -68,39 +70,41 @@ class Send(TrxBetBotPlugin):
         available_amount = tron.fromSun(balance)
 
         # Check if address has enough balance
-        if float(amount) > float(available_amount):
+        if amount > (float(available_amount) - con.TRX_FEE):
             msg = f"{emo.ERROR} Not enough funds. You balance is {available_amount} TRX"
-            logging.info(f"{msg} - {data[0][1]} - {update}")
+            logging.info(f"{msg} - {from_address} - {update}")
             update.message.reply_text(msg)
             return
 
         message = None
 
         try:
-            send = tron.trx.send(address, float(amount))
+            send = tron.trx.send(to_address, amount)
+
+            logging.info(f"Sent {amount} TRX from {from_address} to {to_address}: {send}")
 
             if "transaction" not in send:
-                logging.error(f"Key 'transaction' not in send result to {address}: {send}")
+                logging.error(f"Key 'transaction' not in result")
                 raise Exception(send["message"])
 
-            txid = send["transaction"]["txID"]
+            # Insert details into database
+            sql = self.get_resource("insert_sent.sql")
+            self.execute_global_sql(sql, from_address, to_address, tron.toSun(amount))
 
+            txid = send["transaction"]["txID"]
             explorer_link = f"https://tronscan.org/#/transaction/{txid}"
             msg = f"{emo.DONE} Successfully sent `{amount}` TRX. [View " \
                   f"on Block Explorer]({explorer_link}) (wait ~1 minute)"
 
-            message = update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN, disable_web_page_preview=True)
-
-            logging.info(f"Sent {amount} TRX from {data[0][1]} to {address} - {update}")
-
-            sql = self.get_resource("insert_sent.sql")
-            self.execute_global_sql(sql, data[0][1], address, int(balance))
+            message = update.message.reply_text(
+                msg,
+                parse_mode=ParseMode.MARKDOWN,
+                disable_web_page_preview=True)
         except Exception as e:
-            if "balance is not sufficient" in str(e):
-                msg = f"{emo.ERROR} Balance not sufficient. Try removing fee of `{con.TRX_FEE}` TRX"
-                update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
-            else:
-                update.message.reply_text(f"{emo.ERROR} {repr(e)}")
+            msg = f"{emo.ERROR} Couldn't send {amount} TRX from {from_address} to {to_address}: {e}"
+
+            logging.error(msg)
+            update.message.reply_text(msg)
 
         if bot.get_chat(update.message.chat_id).type == Chat.PRIVATE:
             remove_time = self.config.get("private_remove_after")

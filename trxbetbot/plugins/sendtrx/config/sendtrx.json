@@ -1,5 +1,5 @@
 {
-    "handle": "send",
+    "handle": "sendtrx",
     "category": "Wallet",
     "description": "Send TRX from your bot wallet",
     "public_remove_after": 60,

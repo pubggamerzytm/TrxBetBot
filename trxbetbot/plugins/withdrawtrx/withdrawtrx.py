@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from trxbetbot.plugin import TrxBetBotPlugin
 
 
-class Withdraw(TrxBetBotPlugin):
+class Withdrawtrx(TrxBetBotPlugin):
 
     def __enter__(self):
         if not self.global_table_exists("withdrawals"):
@@ -26,10 +26,10 @@ class Withdraw(TrxBetBotPlugin):
                 parse_mode=ParseMode.MARKDOWN)
             return
 
-        address = args[0]
+        to_address = args[0]
 
         # Check if provided address is valid
-        if not bool(is_address(address)):
+        if not bool(is_address(to_address)):
             msg = f"{emo.ERROR} Provided TRX wallet is not valid"
             update.message.reply_text(msg)
             return
@@ -39,44 +39,74 @@ class Withdraw(TrxBetBotPlugin):
         sql = self.get_global_resource("select_address.sql")
         res = self.execute_global_sql(sql, user_id)
 
-        if not res["success"]:
-            msg = f"Something went wrong. Please contact @Wikioshi the owner of this bot"
+        if not res["success"] or not res["data"]:
+            msg = f"{emo.ERROR} Something went wrong. Please contact Support"
+
+            logging.error(f"{msg}: {res} - {update}")
             update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             return
 
-        data = res["data"]
+        from_address = res["data"][0][1]
 
         trx_kwargs = dict()
-        trx_kwargs["private_key"] = data[0][2]
-        trx_kwargs["default_address"] = data[0][1]
+        trx_kwargs["private_key"] = res["data"][0][2]
+        trx_kwargs["default_address"] = from_address
 
         tron = Tron(**trx_kwargs)
 
         balance = tron.trx.get_balance()
         amount = tron.fromSun(balance)
 
-        try:
-            send = tron.trx.send(address, float(amount))
-            txid = send["transaction"]["txID"]
-        except Exception as e:
-            logging.error(f"Couldn't withdraw full amount - {e}")
+        if (float(amount) - con.TRX_FEE) <= 0:
+            msg = f"{emo.ERROR} Not enough funds after paying fee of {con.TRX_FEE} TRX"
+            logging.info(f"{msg} - {from_address} - {update}")
+            update.message.reply_text(msg)
+            return
 
-            amount = float(amount) - con.TRX_FEE
+        try:
+            # Try withdrawing without paying a fee
+            send = tron.trx.send(to_address, amount)
+
+            if "transaction" not in send:
+                logging.error(f"Key 'transaction' not in result")
+                raise Exception(send["message"])
+
+            txid = send["transaction"]["txID"]
+            logging.info("Withdrawn without paying fee")
+        except Exception as e:
+            logging.info(f"Couldn't withdraw without paying fee: {e} - {update}")
 
             try:
-                send = tron.trx.send(address, amount)
+                # Try withdrawing with paying a fee
+                amount = float(amount) - con.TRX_FEE
+                send = tron.trx.send(to_address, amount)
+
+                if "transaction" not in send:
+                    logging.error(f"Key 'transaction' not in result")
+                    raise Exception(send["message"])
+
                 txid = send["transaction"]["txID"]
+                logging.info("Withdrawn with paying fee")
             except Exception as e:
-                logging.error(f"Couldn't withdraw full amount minus fee - {e}")
-                msg = f"{emo.ERROR} Couldn't withdraw: {repr(e)} - Try /send command"
+                msg = f"{emo.ERROR} Couldn't withdraw {amount} TRX from {from_address} to {to_address}: {e}"
+
+                logging.error(msg)
                 update.message.reply_text(msg)
                 return
+
+        logging.info(f"Withdrawn {amount} TRX from {from_address} to {to_address}: {send}")
+
+        sql = self.get_resource("insert_withdrawal.sql")
+        self.execute_global_sql(sql, from_address, to_address, tron.toSun(amount))
 
         explorer_link = f"https://tronscan.org/#/transaction/{txid}"
         msg = f"{emo.DONE} Successfully withdrawn `{amount}` TRX. [View " \
               f"on Block Explorer]({explorer_link}) (wait ~1 minute)"
 
-        message = update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN, disable_web_page_preview=True)
+        message = update.message.reply_text(
+            msg,
+            parse_mode=ParseMode.MARKDOWN,
+            disable_web_page_preview=True)
 
         if bot.get_chat(update.message.chat_id).type == Chat.PRIVATE:
             remove_time = self.config.get("private_remove_after")
@@ -88,11 +118,6 @@ class Withdraw(TrxBetBotPlugin):
                 self._remove_msg,
                 datetime.now() + timedelta(seconds=remove_time),
                 context=f"{message.chat_id}_{message.message_id}")
-
-        logging.info(f"Withdraw {amount} TRX from {data[0][1]} to {address} - {update}")
-
-        sql = self.get_resource("insert_withdrawal.sql")
-        self.execute_global_sql(sql, data[0][1], address, int(balance))
 
     def _remove_msg(self, bot, job):
         param_lst = job.context.split("_")
