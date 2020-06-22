@@ -735,21 +735,30 @@ class Bet(TrxBetBotPlugin):
         # Pay out WIN token based on amount of TRX that was wagered
         try:
             if self.config.get("win_bonus_active"):
+                logging.info(f"Job {bet_addr58} - WIN bonus active")
+
                 current_month = datetime.today().month
                 current_year = datetime.today().year
 
-                for date, trx in self.config.get("win_bonus").items():
-                    bonus_month = date.split(".")[0]
-                    bonus_year = date.split(".")[1]
+                for bonus_data in self.config.get("win_bonus"):
+                    for date, trx in bonus_data.items():
+                        bonus_month = int(date.split(".")[0])
+                        bonus_year = int(date.split(".")[1])
 
-                    # We found the data that we will use to determine WIN amount to pay
-                    if int(bonus_month) == current_month and int(bonus_year) == current_year:
-                        win_to_pay = int(amo / float(trx))
+                        if not bonus_month or not bonus_year:
+                            continue
 
-                        if win_to_pay > 0:
-                            sent_win = TRC20().send("WIN", self.get_tron(), bet.usr_address, win_to_pay)
-                            logging.info(f"Job {bet_addr58} - Payed {win_to_pay} WIN bonus - {sent_win}")
-                        break
+                        # We found the data that we will use to determine WIN amount to pay
+                        if bonus_month == current_month and bonus_year == current_year:
+                            logging.info(f"Job {bet_addr58} - 1 WIN per {trx} TRX")
+                            win_to_pay = int(amo / float(trx))
+
+                            if win_to_pay > 0:
+                                sent_win = TRC20().send("WIN", self.get_tron(), bet.usr_address, win_to_pay)
+                                logging.info(f"Job {bet_addr58} - Payed {win_to_pay} WIN bonus - {sent_win}")
+                            else:
+                                logging.info(f"Job {bet_addr58} - No WIN bonus payed")
+                            break
         except Exception as e:
             msg = f"Job {bet_addr58} - Couldn't payout WIN bonus: {e}"
             logging.error(msg)

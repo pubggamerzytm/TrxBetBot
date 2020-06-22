@@ -99,40 +99,18 @@ class Sendwin(TrxBetBotPlugin):
         message = None
 
         try:
-            cont_kwargs = dict()
-            cont_kwargs["contract_address"] = tron.address.to_hex(TRC20().SC["WIN"])
-            cont_kwargs["function_selector"] = "transfer(address,uint256)"
-            cont_kwargs["fee_limit"] = tron.toSun(con.TRX_FEE)
-            cont_kwargs["call_value"] = 0
-            cont_kwargs["parameters"] = [
-                {
-                    'type': 'address',
-                    'value': tron.address.to_hex(to_address)
-                },
-                {
-                    'type': 'uint256',
-                    'value': tron.toSun(amount)
-                }
-            ]
+            sent_win = TRC20().send("WIN", tron, to_address, amount)
+            logging.info(f"Sent {amount} WIN from {from_address} to {to_address}: {sent_win}")
 
-            # Create raw transaction
-            raw_tx = tron.transaction_builder.trigger_smart_contract(**cont_kwargs)
-            # Sign the raw transaction
-            sig_tx = tron.trx.sign(raw_tx["transaction"])
-            # Broadcast the signed transaction
-            result = tron.trx.broadcast(sig_tx)
-
-            logging.info(f"Sent {amount} WIN from {from_address} to {to_address}: {result}")
-
-            if "transaction" not in result:
+            if "transaction" not in sent_win:
                 logging.error(f"Key 'transaction' not in result")
-                raise Exception(result["message"])
+                raise Exception(sent_win["message"])
 
             # Insert details into database
             sql = self.get_resource("insert_sent.sql")
             self.execute_global_sql(sql, from_address, to_address, tron.toSun(amount))
 
-            txid = result["transaction"]["txID"]
+            txid = sent_win["transaction"]["txID"]
             explorer_link = f"https://tronscan.org/#/transaction/{txid}"
             msg = f"{emo.DONE} Successfully sent `{amount}` WIN. [View " \
                   f"on Block Explorer]({explorer_link}) (wait ~1 minute)"
