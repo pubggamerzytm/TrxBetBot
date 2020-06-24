@@ -13,6 +13,9 @@
     "win_bonus_active": true,
     "win_bonus": [
         {
+            "6.2020": 5
+        },
+        {
             "7.2020": 5
         },
         {
