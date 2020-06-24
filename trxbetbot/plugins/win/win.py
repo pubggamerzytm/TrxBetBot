@@ -713,7 +713,7 @@ class Win(TrxBetBotPlugin):
                         # We found the data that we will use to determine WIN amount to pay
                         if bonus_month == current_month and bonus_year == current_year:
                             logging.info(f"Job {bet_addr58} - 1 WIN per {trx} TRX")
-                            win_to_pay = int(amo / float(trx))
+                            win_to_pay = amo / float(trx)
 
                             if win_to_pay > 0:
                                 sent_win = TRC20().send("WIN", self.get_tron(), bet.usr_address, win_to_pay)
