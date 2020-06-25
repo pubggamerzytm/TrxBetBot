@@ -16,6 +16,11 @@ class Airdrop(TrxBetBotPlugin):
     @TrxBetBotPlugin.threaded
     @TrxBetBotPlugin.send_typing
     def execute(self, bot, update, args):
+        if update.effective_chat.type == Chat.PRIVATE:
+            msg = f"{emo.ERROR} You can only execute this command in a public group"
+            update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
+            return
+
         sql = self.get_global_resource("select_address.sql")
         user_wallet = self.execute_global_sql(sql, update.effective_user.id)
 
@@ -42,11 +47,6 @@ class Airdrop(TrxBetBotPlugin):
         minus_percent = self.config.get("minus")
         amount = float(f"{float(initial_amount) / 100 * (100 - minus_percent):.3f}")
         bot_amount = float(f"{(float(initial_amount) - amount):.3f}")
-
-        if update.effective_chat.type == Chat.PRIVATE:
-            msg = f"{emo.ERROR} You can only execute this command in a public group"
-            update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
-            return
 
         min_trx = self.config.get("min_trx")
         min_sun = self.get_tron().toSun(min_trx)
