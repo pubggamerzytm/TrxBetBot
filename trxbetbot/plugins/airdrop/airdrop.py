@@ -1,3 +1,4 @@
+import time
 import logging
 import trxbetbot.emoji as emo
 import trxbetbot.constants as con
@@ -192,12 +193,19 @@ class Airdrop(TrxBetBotPlugin):
                 users_str += username + ", "
 
                 if self.config.get("direct_msg"):
+                    delay = self.config.get("delay")
+
+                    # Sleep for configurable time so that bot doesn't get blocked
+                    # because it's pushing out more than 30 messages per second
+                    if delay and delay > 0:
+                        time.sleep(delay)
+
                     try:
                         # Send direct message to user that received airdrop
                         msg = f"Hey {usr_data[2]} you got an airdrop of {usr_amount} TRX from user {tipping_usr}!"
                         bot.send_message(user_id, msg)
                     except Exception as e:
-                        msg = f"Not possible to notify user {username}({user_id}) about airdrop of {usr_amount} TRX"
+                        msg = f"Can't notify user {username}({user_id}) about airdrop of {usr_amount} TRX"
                         logging.warning(f"{msg}: {e}")
 
                 logging.info(f"Airdropped {usr_amount} TRX to user {username} ({user_id}) at address {address}")
