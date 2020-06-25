@@ -37,4 +37,5 @@ class TRC20:
 
             return result
         except Exception as e:
+            # TODO: I don't check against 'error' yet after calling this method
             return {"error": e}
