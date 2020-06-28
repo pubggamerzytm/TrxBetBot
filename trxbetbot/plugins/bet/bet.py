@@ -114,29 +114,36 @@ class Bet(TrxBetBotPlugin):
         # Check last bet time and make sure that current
         # bet will be after 'bet_delay' time from config
         if not self.is_autobet(update):
-            sql = self.get_resource("select_last_usr_bet.sql")
-            res = self.execute_sql(sql, update.effective_user.id)
+            try:
+                sql = self.get_resource("select_last_usr_bet.sql")
+                res = self.execute_sql(sql, update.effective_user.id)
 
-            uid = update.effective_user.id
+                uid = update.effective_user.id
 
-            # No last bet for user found
-            if not res["success"] or not res["data"]:
-                msg = f"{addr} Couldn't retrieve last bet for user {uid}. Delay = {delay}"
-                logging.warning(msg)
+                # No last bet for user found
+                if not res["success"]:
+                    msg = f"{addr} Couldn't retrieve last bet for user {uid}. Delay = {delay}"
+                    logging.warning(msg)
 
-            # Last bet for user found
-            else:
-                last_bet_date = datetime.strptime(res["data"][0][0], "%Y-%m-%d %H:%M:%S")
-                bet_delay = res["data"][0][1] if res["data"][0][1] else 0
+                if not res["data"][0][0]:
+                    msg = f"{addr} Couldn't retrieve last bet for user {uid}. Delay = {delay}"
+                    logging.warning(msg)
 
-                default_delay = self.config.get("bet_delay")
-                delta = datetime.utcnow() - last_bet_date
+                # Last bet for user found
+                else:
+                    last_bet_date = datetime.strptime(res["data"][0][0], "%Y-%m-%d %H:%M:%S")
+                    bet_delay = res["data"][0][1] if res["data"][0][1] else 0
 
-                logging.info(f"{addr} Last bet for user {uid} was on {last_bet_date}. Delta is {delta}")
+                    default_delay = self.config.get("bet_delay")
+                    delta = datetime.utcnow() - last_bet_date
 
-                if delta < timedelta(seconds=default_delay):
-                    delay = bet_delay + default_delay
-                    logging.info(f"{addr} Delay set to {delay} seconds")
+                    logging.info(f"{addr} Last bet for user {uid} was on {last_bet_date}. Delta is {delta}")
+
+                    if delta < timedelta(seconds=default_delay):
+                        delay = bet_delay + default_delay
+                        logging.info(f"{addr} Delay set to {delay} seconds")
+            except Exception as e:
+                logging.error(f"{addr} Couldn't determine bet delay: {e}")
 
         # Save generated address to database
         sql = self.get_resource("insert_address.sql")
