@@ -79,4 +79,4 @@ def linux_time(date_time, milliseconds=False):
     import datetime
     epoch = datetime.datetime.utcfromtimestamp(0)
     seconds = (date_time - epoch).total_seconds()
-    return seconds * 1000 if milliseconds else seconds
+    return int(seconds * 1000 if milliseconds else seconds)
