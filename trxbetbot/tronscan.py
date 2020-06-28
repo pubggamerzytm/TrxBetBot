@@ -1,4 +1,5 @@
 import json
+import logging
 import requests
 
 from requests.adapters import HTTPAdapter
@@ -23,12 +24,10 @@ class Tronscan:
             content = json.loads(response.content.decode("utf-8"))
             response.raise_for_status()
             return content
-        except Exception:
-            try:
-                raise ValueError(content)
-            except UnboundLocalError:
-                pass
-            raise
+        except Exception as e:
+            msg = f"Error calling URL {url}: {e}"
+            logging.error(msg)
+            raise e
 
     def __api_url_params(self, api_url, params):
         if params:
