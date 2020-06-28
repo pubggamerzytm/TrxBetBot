@@ -24,14 +24,16 @@ class Balance(TrxBetBotPlugin):
             update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             return
 
-        tron = Tron()
+        trx_kwargs = dict()
+        trx_kwargs["private_key"] = res["data"][0][2]
+        trx_kwargs["default_address"] = res["data"][0][1]
 
-        address = res["data"][0][1]
-        account = Trongrid().get_account(address)
+        tron = Tron(**trx_kwargs)
 
-        trx_amount = 0
-        if account and account["data"] and account["data"][0]:
-            trx_amount = tron.fromSun(int(account["data"][0]["balance"]))
+        trx_balance = tron.trx.get_balance()
+        trx_amount = tron.fromSun(trx_balance)
+
+        account = Trongrid().get_account(res["data"][0][1])
 
         win_amount = 0
         if account and account["data"]:
@@ -40,9 +42,10 @@ class Balance(TrxBetBotPlugin):
                     if trc20_addr == TRC20().SC["WIN"]:
                         win_amount = tron.fromSun(int(trc20_bal))
 
-        msg = f"You wallet balance:\n" \
+        msg = f"*Your wallet balance*\n\n" \
               f"`TRX: {trx_amount}`\n" \
-              f"`WIN: {win_amount}`"
+              f"`WIN: {win_amount}`\n\n" \
+              f"Balance refresh for WIN can take up to 10 min."
         message = update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
 
         if bot.get_chat(update.message.chat_id).type == Chat.PRIVATE:
