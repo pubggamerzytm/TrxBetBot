@@ -1,4 +1,5 @@
 {
     "handle": "stats",
-    "admins": [134166731]
+    "admins": [134166731],
+    "delay": 2
 }

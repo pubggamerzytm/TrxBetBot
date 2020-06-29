@@ -75,8 +75,12 @@ def id(length=8):
     return ''.join(random.choices(alphabet, k=length))
 
 
-def linux_time(date_time, millis=False):
-    import datetime
-    epoch = datetime.datetime.utcfromtimestamp(0)
-    seconds = (date_time - epoch).total_seconds()
+def to_unix_time(date_time, millis=False):
+    from datetime import datetime
+    seconds = (date_time - datetime(1970, 1, 1)).total_seconds()
     return int(seconds * 1000 if millis else seconds)
+
+
+def from_unix_time(seconds, millis=False):
+    from datetime import datetime
+    return datetime.utcfromtimestamp(seconds / 1000 if millis else seconds)
