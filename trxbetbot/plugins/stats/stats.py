@@ -22,10 +22,8 @@ class Stats(TrxBetBotPlugin):
             update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             return
 
-        # TODO: Uncomment
-        #address = self.get_tron().default_address["base58"]
-        address = "TXRZqGMEXsGTX6AQtcSgYknos93hqw18P7"
-        addr_hex = "41eb56d86e23ed25596f3af161e9302f11ffeb127c"
+        addr_base58 = self.get_tron().default_address["base58"]
+        addr_hex = self.get_tron().default_address["hex"]
 
         if len(args) > 0:
             try:
@@ -35,10 +33,10 @@ class Stats(TrxBetBotPlugin):
                 update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
                 return
 
-        if float(args[0]) > 24:
-            msg = f"{emo.ERROR} Max number of hours is 24"
-            update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
-            return
+            if float(args[0]) > 24:
+                msg = f"{emo.ERROR} Max number of hours is 24"
+                update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
+                return
 
         message = update.message.reply_text(f"{emo.WAIT} Wait...")
 
@@ -58,7 +56,7 @@ class Stats(TrxBetBotPlugin):
 
         while True:
             # Get all transactions from or to bot address
-            transactions = tg.get_transactions(address, **tx_kwargs)
+            transactions = tg.get_transactions(addr_base58, **tx_kwargs)
 
             for tx in transactions["data"]:
                 value = tx["raw_data"]["contract"][0]["parameter"]["value"]
