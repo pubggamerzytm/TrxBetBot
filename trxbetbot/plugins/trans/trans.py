@@ -4,6 +4,7 @@ from telegram import ParseMode, Chat
 from trxbetbot.plugin import TrxBetBotPlugin
 
 
+# TODO: Get number of incoming & outgoing & and all transactions
 class Trans(TrxBetBotPlugin):
 
     URL = "https://tronscan.org/#/address/"
@@ -17,11 +18,4 @@ class Trans(TrxBetBotPlugin):
             update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             return
 
-        sql = self.get_resource("count_all.sql")
-        res_bet = self.execute_sql(sql, plugin="bet")
-        res_mix = self.execute_sql(sql, plugin="bet")
-        res_win = self.execute_sql(sql, plugin="bet")
-
-        print("BET", res_bet["data"][0][0])
-        print("MIX", res_mix["data"][0][0])
-        print("WIN", res_win["data"][0][0])
+        # TODO: Find way to get all transactions
