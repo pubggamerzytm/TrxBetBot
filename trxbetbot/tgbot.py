@@ -57,19 +57,20 @@ class TelegramBot:
         solidity_node = self.config.get("tron", "solidity_node")
         event_server = self.config.get("tron", "event_server")
 
-        self.trx_kwargs = dict()
+        # TODO: Doesn't need to be here anymore
+        trx_kwargs = dict()
 
         if full_node:
-            self.trx_kwargs["full_node"] = full_node
+            trx_kwargs["full_node"] = full_node
         if solidity_node:
-            self.trx_kwargs["solidity_node"] = solidity_node
+            trx_kwargs["solidity_node"] = solidity_node
         if event_server:
-            self.trx_kwargs["event_server"] = event_server
+            trx_kwargs["event_server"] = event_server
 
-        self.trx_kwargs["private_key"] = privkey
-        self.trx_kwargs["default_address"] = Address.from_private_key(privkey)["base58"]
+        trx_kwargs["private_key"] = privkey
+        trx_kwargs["default_address"] = Address.from_private_key(privkey)["base58"]
 
-        self.tron = Tron(**self.trx_kwargs)
+        self.tron = Tron(**trx_kwargs)
         logging.info(f"Bot TRX Wallet: {self.tron.address.from_private_key(privkey)}")
 
         # Load classes in folder 'plugins'
@@ -88,29 +89,6 @@ class TelegramBot:
                 self.updater.bot.send_message(admin, "Bot is up and running!")
             except Exception as e:
                 logging.error(e)
-
-    # TODO: Get trx_kwargs from the 'tron' object
-    # TODO: Does 'trx_kwargs' still need to be present in "self"?
-    def set_tron_server(self, tron, host=None):
-        if not host:
-            current_server = self.trx_kwargs["full_node"]
-            servers = self.config.get("tron", "api_server_list")
-
-            while True:
-                new_server = random.choice(servers)
-                if new_server is not current_server:
-                    host = new_server
-                    break
-
-        host = host if host.lower().startswith("https://") else "https://" + host
-
-        self.trx_kwargs["full_node"] = host
-        self.trx_kwargs["solidity_node"] = host
-        self.trx_kwargs["event_server"] = host
-
-        self.tron = Tron(**self.trx_kwargs)
-
-        logging.info(f"New TRON API host set: {host}")
 
     def bot_start_polling(self):
         """ Start the bot in polling mode """
