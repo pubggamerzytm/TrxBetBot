@@ -28,7 +28,10 @@
         "port": 5006
     },
     "tron": {
-        "api_server_list": [
+        "full_node": "api.tronscan.org",
+        "solidity_node": "api.tronscan.org",
+        "event_server": "api.tronscan.org",
+        "server_list": [
             "3.225.171.164",
             "52.53.189.99",
             "18.196.99.16",
