@@ -1,7 +1,8 @@
 import os
+import shutil
+import random
 import logging
 import importlib
-import shutil
 import trxbetbot.emoji as emo
 import trxbetbot.utils as utl
 import trxbetbot.constants as con
@@ -27,17 +28,17 @@ class TelegramBot:
         connect_timeout = self.config.get("telegram", "connect_timeout")
         con_pool_size = self.config.get("telegram", "con_pool_size")
 
-        tgb_kwargs = dict()
+        self.tgb_kwargs = dict()
 
         if read_timeout:
-            tgb_kwargs["read_timeout"] = read_timeout
+            self.tgb_kwargs["read_timeout"] = read_timeout
         if connect_timeout:
-            tgb_kwargs["connect_timeout"] = connect_timeout
+            self.tgb_kwargs["connect_timeout"] = connect_timeout
         if con_pool_size:
-            tgb_kwargs["con_pool_size"] = con_pool_size
+            self.tgb_kwargs["con_pool_size"] = con_pool_size
 
         try:
-            self.updater = Updater(token, request_kwargs=tgb_kwargs)
+            self.updater = Updater(token, request_kwargs=self.tgb_kwargs)
         except InvalidToken as e:
             logging.error(f"ERROR: Bot token not valid: {e}")
             exit()
@@ -56,19 +57,19 @@ class TelegramBot:
         solidity_node = self.config.get("tron", "solidity_node")
         event_server = self.config.get("tron", "event_server")
 
-        trx_kwargs = dict()
+        self.trx_kwargs = dict()
 
         if full_node:
-            trx_kwargs["full_node"] = full_node
+            self.trx_kwargs["full_node"] = full_node
         if solidity_node:
-            trx_kwargs["solidity_node"] = solidity_node
+            self.trx_kwargs["solidity_node"] = solidity_node
         if event_server:
-            trx_kwargs["event_server"] = event_server
+            self.trx_kwargs["event_server"] = event_server
 
-        trx_kwargs["private_key"] = privkey
-        trx_kwargs["default_address"] = Address.from_private_key(privkey)["base58"]
+        self.trx_kwargs["private_key"] = privkey
+        self.trx_kwargs["default_address"] = Address.from_private_key(privkey)["base58"]
 
-        self.tron = Tron(**trx_kwargs)
+        self.tron = Tron(**self.trx_kwargs)
         logging.info(f"Bot TRX Wallet: {self.tron.address.from_private_key(privkey)}")
 
         # Load classes in folder 'plugins'
@@ -87,6 +88,29 @@ class TelegramBot:
                 self.updater.bot.send_message(admin, "Bot is up and running!")
             except Exception as e:
                 logging.error(e)
+
+    # TODO: Get trx_kwargs from the 'tron' object
+    # TODO: Does 'trx_kwargs' still need to be present in "self"?
+    def set_tron_server(self, tron, host=None):
+        if not host:
+            current_server = self.trx_kwargs["full_node"]
+            servers = self.config.get("tron", "api_server_list")
+
+            while True:
+                new_server = random.choice(servers)
+                if new_server is not current_server:
+                    host = new_server
+                    break
+
+        host = host if host.lower().startswith("https://") else "https://" + host
+
+        self.trx_kwargs["full_node"] = host
+        self.trx_kwargs["solidity_node"] = host
+        self.trx_kwargs["event_server"] = host
+
+        self.tron = Tron(**self.trx_kwargs)
+
+        logging.info(f"New TRON API host set: {host}")
 
     def bot_start_polling(self):
         """ Start the bot in polling mode """
