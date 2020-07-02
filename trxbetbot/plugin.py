@@ -121,12 +121,6 @@ class TrxBetBotPlugin:
     def get_tron(self) -> Tron:
         return self._tgb.tron
 
-    def _(self, tron: Tron):
-        status = tron.manager.is_connected()
-        if not all(value is True for value in status.values()):
-            self._tgb.set_tron_server(tron)
-        return tron
-
     def get_global_resource(self, filename):
         """ Return the content of the given file
         from the global 'resource' directory """
