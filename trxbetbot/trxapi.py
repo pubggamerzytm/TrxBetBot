@@ -3,7 +3,8 @@ import random
 import logging
 import trxbetbot.constants as con
 
-from tronapi import Tron
+from tronapi import Tron, constants
+from tronapi.manager import TronManager
 from trxbetbot.config import ConfigManager as Cfg
 
 
@@ -11,38 +12,72 @@ class TRXAPI(Tron):
 
     cfg = Cfg(os.path.join(con.DIR_CFG, con.FILE_CFG))
 
-    def __init__(self, **kwargs):
+    def __init__(self, check=False, **kwargs):
+        super().__init__(**kwargs)
         self.kwargs = kwargs
+        self.set_server()
 
-        if not self.kwargs or not self.kwargs["full_node"]:
+        if check and not self.is_available():
+            self.find_server()
+
+    def set_server(self, host=None):
+        if host:
+            full_node = host
+            solidity_node = host
+            event_server = host
+        else:
+            # Get default API server from config
             full_node = self.cfg.get("tron", "full_node")
             solidity_node = self.cfg.get("tron", "solidity_node")
             event_server = self.cfg.get("tron", "event_server")
 
-            if full_node:
-                kwargs["full_node"] = full_node
-            if solidity_node:
-                kwargs["solidity_node"] = solidity_node
-            if event_server:
-                kwargs["event_server"] = event_server
+        if full_node and not full_node.lower().startswith("https://"):
+            full_node = "https://" + full_node
+        if solidity_node and not solidity_node.lower().startswith("https://"):
+            solidity_node = "https://" + solidity_node
+        if event_server and not event_server.lower().startswith("https://"):
+            event_server = "https://" + event_server
 
-        super().__init__(**self.kwargs)
+        if full_node:
+            self.kwargs["full_node"] = full_node
+        if solidity_node:
+            self.kwargs["solidity_node"] = solidity_node
+        if event_server:
+            self.kwargs["event_server"] = event_server
 
-        if kwargs["check"]:
-            self.check_server()
+        self._refresh()
 
-    def check_server(self):
-        status = self.manager.is_connected()
-        if not all(value is True for value in status.values()):
-            servers = self.cfg.get("tron", "server_list")
-            current_server = self.kwargs["full_node"]
+    def _refresh(self):
+        self.kwargs.setdefault('full_node', constants.DEFAULT_NODES['full_node'])
+        self.kwargs.setdefault('solidity_node', constants.DEFAULT_NODES['solidity_node'])
+        self.kwargs.setdefault('event_server', constants.DEFAULT_NODES['event_server'])
 
-            for i in range(3):
-                new_server = random.choice(servers)
-                if new_server is not current_server:
-                    host = new_server
+        self.manager = TronManager(self, dict(
+            full_node=self.kwargs.get('full_node'),
+            solidity_node=self.kwargs.get('solidity_node'),
+            event_server=self.kwargs.get('event_server')))
+
+    def is_available(self):
+        status = self.is_connected()
+        return True if all(v is True for v in status.values()) else False
+
+    def find_server(self, retry=3):
+        # Get server list from config
+        hosts = self.cfg.get("tron", "server_list")
+        hosts = ["https://" + x for x in hosts if not x.lower().startswith("https://")]
+
+        current_host = self.kwargs["full_node"]
+
+        connected = False
+        for i in range(retry):
+            # Choose random server
+            new_host = random.choice(hosts)
+            if new_host is not current_host:
+                self.set_server(new_host)
+                if self.is_available():
+                    connected = True
                     break
 
-            # TODO: How to set this?
-            host = host if host.startswith("https://") else "https://" + host
-            logging.info(f"New TRON API host set: {host}")
+        if not connected:
+            self.set_server()
+            logging.error("Not possible to connect to TRON API")

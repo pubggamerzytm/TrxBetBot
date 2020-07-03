@@ -1,20 +1,19 @@
 import os
 import shutil
-import random
 import logging
 import importlib
 import trxbetbot.emoji as emo
 import trxbetbot.utils as utl
 import trxbetbot.constants as con
 
-from tronapi.main import Address
-from tronapi import Tron
-from importlib import reload
 from zipfile import ZipFile
-from trxbetbot.config import ConfigManager
+from importlib import reload
+from tronapi.main import Address
+from trxbetbot.trxapi import TRXAPI
 from telegram import ParseMode, Chat
 from telegram.ext import Updater, MessageHandler, Filters, CommandHandler
 from telegram.error import InvalidToken, Unauthorized
+from trxbetbot.config import ConfigManager
 
 
 class TelegramBot:
@@ -53,20 +52,11 @@ class TelegramBot:
         self.job_queue = self.updater.job_queue
         self.dispatcher = self.updater.dispatcher
 
-        # TODO: Doesn't need to be here anymore
         trx_kwargs = dict()
-
-        if full_node:
-            trx_kwargs["full_node"] = full_node
-        if solidity_node:
-            trx_kwargs["solidity_node"] = solidity_node
-        if event_server:
-            trx_kwargs["event_server"] = event_server
-
         trx_kwargs["private_key"] = privkey
         trx_kwargs["default_address"] = Address.from_private_key(privkey)["base58"]
 
-        self.tron = Tron(**trx_kwargs)
+        self.tron = TRXAPI(**trx_kwargs)
         logging.info(f"Bot TRX Wallet: {self.tron.address.from_private_key(privkey)}")
 
         # Load classes in folder 'plugins'
