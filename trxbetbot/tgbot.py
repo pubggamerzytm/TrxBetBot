@@ -53,10 +53,6 @@ class TelegramBot:
         self.job_queue = self.updater.job_queue
         self.dispatcher = self.updater.dispatcher
 
-        full_node = self.config.get("tron", "full_node")
-        solidity_node = self.config.get("tron", "solidity_node")
-        event_server = self.config.get("tron", "event_server")
-
         # TODO: Doesn't need to be here anymore
         trx_kwargs = dict()
 

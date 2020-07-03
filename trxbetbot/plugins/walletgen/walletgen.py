@@ -16,7 +16,7 @@ class Walletgen(TrxBetBotPlugin):
             return
 
         # Default number of days to fetch address data for
-        days = 9999
+        days = 30
 
         if len(args) > 0:
             try:
@@ -38,17 +38,22 @@ class Walletgen(TrxBetBotPlugin):
         h_win = self.config.get("past_win_addr")
 
         # Current data
-        bet = res_bet['data'][0][0] + h_bet
-        mix = res_mix['data'][0][0] + h_mix
-        win = res_win['data'][0][0] + h_win
-        usr = res_global['data'][0][0]
+        bet = res_bet['data'][0][0] if res_bet['data'] else 0
+        mix = res_mix['data'][0][0] if res_mix['data'] else 0
+        win = res_win['data'][0][0] if res_win['data'] else 0
+        usr = res_global['data'][0][0] if res_global['data'] else 0
         total = bet + mix + win + usr
 
-        msg = f"*Number of generated addresses*\n\n" \
+        msg = f"*Generated addresses in last {days} days*\n\n" \
               f"`Bet   {bet}`\n" \
               f"`Mix   {mix}`\n" \
               f"`Win   {win}`\n" \
               f"`Users {usr}`\n\n" \
-              f"`Total {total}`"
+              f"`Total {total}`\n\n" \
+              f"*Historic data*\n" \
+              f"`Bet   {h_bet}`\n" \
+              f"`Mix   {h_mix}`\n" \
+              f"`Win   {h_win}`\n\n" \
+              f"`All   {total + h_bet + h_mix + h_win}`"
 
         update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
