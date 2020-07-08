@@ -58,7 +58,11 @@ class TRXAPI(Tron):
             event_server=self.kwargs.get('event_server')))
 
     def is_available(self):
-        status = self.is_connected()
+        try:
+            status = self.is_connected()
+        except Exception as e:
+            logging.error(f"TRON API: Not possible to connect: {e}")
+            return False
         return True if all(v is True for v in status.values()) else False
 
     def find_server(self, retry=3):
@@ -77,7 +81,9 @@ class TRXAPI(Tron):
                 if self.is_available():
                     connected = True
                     break
+                else:
+                    logging.error(f"TRON API: Host #{i} not available: {new_host}")
 
         if not connected:
             self.set_server()
-            logging.error("Not possible to connect to TRON API")
+            logging.error("TRON API: Reset to default host")
