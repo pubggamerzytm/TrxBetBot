@@ -8,6 +8,7 @@ from tronapi.manager import TronManager
 from trxbetbot.config import ConfigManager as Cfg
 
 
+# TODO: If current API endpoint != default endpoint, try default first
 class TRXAPI(Tron):
 
     cfg = Cfg(os.path.join(con.DIR_CFG, con.FILE_CFG))
@@ -27,16 +28,9 @@ class TRXAPI(Tron):
             event_server = host
         else:
             # Get default API server from config
-            full_node = self.cfg.get("tron", "full_node")
-            solidity_node = self.cfg.get("tron", "solidity_node")
-            event_server = self.cfg.get("tron", "event_server")
-
-        if full_node and not full_node.lower().startswith("https://"):
-            full_node = "https://" + full_node
-        if solidity_node and not solidity_node.lower().startswith("https://"):
-            solidity_node = "https://" + solidity_node
-        if event_server and not event_server.lower().startswith("https://"):
-            event_server = "https://" + event_server
+            full_node = self.cfg.get("tron", "default_full_node")
+            solidity_node = self.cfg.get("tron", "default_solidity_node")
+            event_server = self.cfg.get("tron", "default_event_server")
 
         if full_node:
             self.kwargs["full_node"] = full_node
@@ -67,15 +61,15 @@ class TRXAPI(Tron):
 
     def find_server(self, retry=3):
         # Get server list from config
-        hosts = self.cfg.get("tron", "server_list")
-        hosts = ["https://" + x for x in hosts if not x.lower().startswith("https://")]
+        full_node_list = self.cfg.get("tron", "full_node_list")
+        solidity_node_list = self.cfg.get("tron", "solidity_node_list")
 
         current_host = self.kwargs["full_node"]
 
         connected = False
         for i in range(retry):
             # Choose random server
-            new_host = random.choice(hosts)
+            new_host = random.choice(full_node_list)
             if new_host is not current_host:
                 self.set_server(new_host)
                 if self.is_available():
