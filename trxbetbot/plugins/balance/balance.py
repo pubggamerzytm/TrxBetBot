@@ -28,7 +28,7 @@ class Balance(TrxBetBotPlugin):
         trx_kwargs["private_key"] = res["data"][0][2]
         trx_kwargs["default_address"] = res["data"][0][1]
 
-        tron = TRXAPI(check=True, **trx_kwargs)
+        tron = TRXAPI(**trx_kwargs)
 
         trx_balance = tron.trx.get_balance()
         trx_amount = tron.fromSun(trx_balance)

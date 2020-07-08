@@ -8,38 +8,29 @@ from tronapi.manager import TronManager
 from trxbetbot.config import ConfigManager as Cfg
 
 
-# TODO: If current API endpoint != default endpoint, try default first
 class TRXAPI(Tron):
 
     cfg = Cfg(os.path.join(con.DIR_CFG, con.FILE_CFG))
 
-    def __init__(self, check=False, **kwargs):
-        super().__init__(**kwargs)
-        self.kwargs = kwargs
-        self.set_server()
+    def __init__(self, **kwargs):
+        self.kwargs = self.enrich(**kwargs)
+        super().__init__(**self.kwargs)
 
-        if check and not self.is_available():
-            self.find_server()
-
-    def set_server(self, host=None):
-        if host:
-            full_node = host
-            solidity_node = host
-            event_server = host
-        else:
-            # Get default API server from config
+    def enrich(self, **kwargs):
+        if "full_node" not in kwargs:
             full_node = self.cfg.get("tron", "default_full_node")
+            if full_node:
+                kwargs["full_node"] = full_node
+        if "solidity_node" not in kwargs:
             solidity_node = self.cfg.get("tron", "default_solidity_node")
-            event_server = self.cfg.get("tron", "default_event_server")
+            if solidity_node:
+                kwargs["solidity_node"] = solidity_node
+        if "event_server" not in kwargs:
+            event_server = self.cfg.get("tron", "default_event_node")
+            if event_server:
+                kwargs["event_server"] = event_server
 
-        if full_node:
-            self.kwargs["full_node"] = full_node
-        if solidity_node:
-            self.kwargs["solidity_node"] = solidity_node
-        if event_server:
-            self.kwargs["event_server"] = event_server
-
-        self._refresh()
+        return kwargs
 
     def _refresh(self):
         self.kwargs.setdefault('full_node', constants.DEFAULT_NODES['full_node'])
