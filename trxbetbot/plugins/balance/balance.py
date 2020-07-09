@@ -30,7 +30,7 @@ class Balance(TrxBetBotPlugin):
 
         tron = TRXAPI(**trx_kwargs)
 
-        trx_balance = tron.reconnect(tron.trx.get_balance)
+        trx_balance = tron.re(tron.trx.get_balance)
         trx_amount = tron.fromSun(trx_balance)
 
         account = Trongrid().get_account(res["data"][0][1])
