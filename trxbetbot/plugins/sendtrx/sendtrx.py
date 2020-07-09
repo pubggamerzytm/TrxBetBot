@@ -2,7 +2,7 @@ import logging
 import trxbetbot.emoji as emo
 import trxbetbot.constants as con
 
-from tronapi import Tron
+from trxbetbot.trxapi import TRXAPI
 from telegram import ParseMode, Chat
 from trx_utils import is_address
 from datetime import datetime, timedelta
@@ -64,9 +64,9 @@ class Sendtrx(TrxBetBotPlugin):
         trx_kwargs["private_key"] = res["data"][0][2]
         trx_kwargs["default_address"] = from_address
 
-        tron = Tron(**trx_kwargs)
+        tron = TRXAPI(**trx_kwargs)
 
-        balance = tron.trx.get_balance()
+        balance = tron.re(tron.trx.get_balance)
         available_amount = tron.fromSun(balance)
 
         # Check if address has enough balance
@@ -79,7 +79,7 @@ class Sendtrx(TrxBetBotPlugin):
         message = None
 
         try:
-            send = tron.trx.send(to_address, amount)
+            send = tron.re(tron.trx.send, to_address, amount)
 
             logging.info(f"Sent {amount} TRX from {from_address} to {to_address}: {send}")
 

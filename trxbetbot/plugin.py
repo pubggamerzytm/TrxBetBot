@@ -6,7 +6,7 @@ import threading
 import trxbetbot.constants as c
 import trxbetbot.emoji as emo
 
-from tronapi import Tron
+from trxbetbot.trxapi import TRXAPI
 from pathlib import Path
 from telegram import ChatAction, Chat
 from trxbetbot.config import ConfigManager
@@ -118,7 +118,7 @@ class TrxBetBotPlugin:
         """ Disable a plugin """
         return self._tgb.remove_plugin(module_name)
 
-    def get_tron(self) -> Tron:
+    def get_tron(self) -> TRXAPI:
         return self._tgb.tron
 
     def get_global_resource(self, filename):

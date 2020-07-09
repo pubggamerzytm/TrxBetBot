@@ -2,7 +2,7 @@ import logging
 import trxbetbot.emoji as emo
 import trxbetbot.constants as con
 
-from tronapi import Tron
+from trxbetbot.trxapi import TRXAPI
 from trxbetbot.trc20 import TRC20
 from telegram import ParseMode, Chat
 from trx_utils import is_address
@@ -66,9 +66,9 @@ class Sendwin(TrxBetBotPlugin):
         tron_kwargs["private_key"] = res["data"][0][2]
         tron_kwargs["default_address"] = from_address
 
-        tron = Tron(**tron_kwargs)
+        tron = TRXAPI(**tron_kwargs)
 
-        trx_balance = tron.trx.get_balance()
+        trx_balance = tron.re(tron.trx.get_balance)
         trx_amount = tron.fromSun(trx_balance)
 
         # Check if enough TRX to pay transaction fee

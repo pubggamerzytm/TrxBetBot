@@ -1,6 +1,6 @@
 import trxbetbot.constants as con
 
-from tronapi import Tron
+from trxbetbot.trxapi import TRXAPI
 
 
 class TRC20:
@@ -10,7 +10,7 @@ class TRC20:
         "WIN": "TLa2f6VPqDgRE67v1736s7bJ8Ray5wYjU7"
     }
 
-    def send(self, ticker: str, tron: Tron, to_address: str, amount: float):
+    def send(self, ticker: str, tron: TRXAPI, to_address: str, amount: float):
         cont_kwargs = dict()
         cont_kwargs["contract_address"] = tron.address.to_hex(self.SC[ticker.upper()])
         cont_kwargs["function_selector"] = "transfer(address,uint256)"
@@ -29,11 +29,11 @@ class TRC20:
 
         try:
             # Create raw transaction
-            raw_tx = tron.transaction_builder.trigger_smart_contract(**cont_kwargs)
+            raw_tx = tron.re(tron.transaction_builder.trigger_smart_contract, **cont_kwargs)
             # Sign the raw transaction
-            sig_tx = tron.trx.sign(raw_tx["transaction"])
+            sig_tx = tron.re(tron.trx.sign, raw_tx["transaction"])
             # Broadcast the signed transaction
-            result = tron.trx.broadcast(sig_tx)
+            result = tron.re(tron.trx.broadcast, sig_tx)
 
             return result
         except Exception as e:
