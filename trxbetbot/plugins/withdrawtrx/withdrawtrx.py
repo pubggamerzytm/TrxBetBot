@@ -2,7 +2,7 @@ import logging
 import trxbetbot.emoji as emo
 import trxbetbot.constants as con
 
-from tronapi import Tron
+from trxbetbot.trxapi import TRXAPI
 from trx_utils import is_address
 from telegram import ParseMode, Chat
 from datetime import datetime, timedelta
@@ -52,9 +52,9 @@ class Withdrawtrx(TrxBetBotPlugin):
         trx_kwargs["private_key"] = res["data"][0][2]
         trx_kwargs["default_address"] = from_address
 
-        tron = Tron(**trx_kwargs)
+        tron = TRXAPI(**trx_kwargs)
 
-        balance = tron.trx.get_balance()
+        balance = tron.re(tron.trx.get_balance)
         amount = tron.fromSun(balance)
 
         if (float(amount) - con.TRX_FEE) <= 0:
@@ -65,7 +65,7 @@ class Withdrawtrx(TrxBetBotPlugin):
 
         try:
             # Try withdrawing without paying a fee
-            send = tron.trx.send(to_address, amount)
+            send = tron.re(tron.trx.send, to_address, amount)
 
             if "transaction" not in send:
                 logging.error(f"Key 'transaction' not in result")
@@ -79,7 +79,7 @@ class Withdrawtrx(TrxBetBotPlugin):
             try:
                 # Try withdrawing with paying a fee
                 amount = float(amount) - con.TRX_FEE
-                send = tron.trx.send(to_address, amount)
+                send = tron.re(tron.trx.send, to_address, amount)
 
                 if "transaction" not in send:
                     logging.error(f"Key 'transaction' not in result")
