@@ -6,7 +6,7 @@
         "notify_on_error": true
     },
     "telegram": {
-        "read_timeout": 240,
+        "read_timeout": 2000,
         "connect_timeout": 30,
         "con_pool_size": 20
     },
@@ -31,7 +31,6 @@
         "default_full_node": "https://api.trongrid.io",
         "default_solidity_node": "https://api.trongrid.io",
         "full_node_list": [
-            "https://api.trongrid.io",
             "http://54.236.37.243:8090",
             "http://52.53.189.99:8090",
             "http://18.196.99.16:8090",
@@ -64,7 +63,6 @@
             "http://47.75.249.4:8090"
         ],
         "solidity_node_list": [
-            "https://api.trongrid.io",
             "http://47.89.187.247:8091",
             "http://47.91.18.255:8091",
             "http://47.75.10.71:8091",
