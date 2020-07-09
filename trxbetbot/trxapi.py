@@ -65,13 +65,17 @@ class TRXAPI(Tron):
 
         return False
 
-    def reconnect(self, fun, *args, **kwargs):
+    def re(self, fun, *args, **kwargs):
         result = None
 
         try:
             return fun(*args, **kwargs)
         except Exception as e:
-            logging.error(f"TRON API: Reconnecting {e} - Input: {fun} {args} {kwargs} - Result: {result}")
+            logging.error(
+                f"TRON API: Can't execute: {fun}({args}, {kwargs}) - "
+                f"Result: {result} - "
+                f"Error: {e} - "
+                f"Changing nodes...")
 
             if not self.full_node_connected():
                 self.change_full_node()
@@ -81,7 +85,11 @@ class TRXAPI(Tron):
             try:
                 return fun(*args, **kwargs)
             except:
-                logging.error(f"TRON API: ERROR {e} - Input: {fun} {args} {kwargs} - Result: {result}")
+                logging.error(
+                    f"TRON API: Can't execute: {fun}({args}, {kwargs}) - "
+                    f"Result: {result} - "
+                    f"Error: {e} - "
+                    f"Giving up...")
                 return None
 
     def change_full_node(self, retry=3):
@@ -94,7 +102,7 @@ class TRXAPI(Tron):
             if new_node is not self.manager.full_node.node_url:
                 self.manager.full_node.node_url = new_node
                 if self.full_node_connected():
-                    self.cfg.set(new_node, "tron", "default_full_node")
+                    #self.cfg.set(new_node, "tron", "default_full_node")
                     logging.info(f"TRON API: Changed Full Node to {new_node}")
                     return
                 else:
@@ -113,7 +121,7 @@ class TRXAPI(Tron):
             if new_node is not self.manager.solidity_node.node_url:
                 self.manager.solidity_node.node_url = new_node
                 if self.solidity_node_connected():
-                    self.cfg.set(new_node, "tron", "default_solidity_node")
+                    #self.cfg.set(new_node, "tron", "default_solidity_node")
                     logging.info(f"TRON API: Changed Solidity Node to {new_node}")
                     return
                 else:
