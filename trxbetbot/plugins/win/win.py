@@ -247,7 +247,9 @@ class Win(TrxBetBotPlugin):
             "preset": preset,
             "update": update,
             "start": time.time(),
-            "message": message
+            "message": message,
+            "sc_trx": 0,     # Second chance TRX value
+            "sc_win": False  # Second chance won or not
         }
 
         self.repeat_job(self.scan_balance, check, first=first, context=context)
@@ -489,9 +491,6 @@ class Win(TrxBetBotPlugin):
 
         bot_addr = self.get_tron().default_address.hex
 
-        second_chance_win = False
-        second_chance_trx = 0
-
         # Determine if bet was won or lost
         # But only if not already saved
         if bet.bet_won is None:
@@ -509,20 +508,20 @@ class Win(TrxBetBotPlugin):
                 for bonus in bonuses:
                     # SECOND CHANCE WON
                     if random_number < (bonus["chance"] / 100):
-                        second_chance_trx = bonus["trx"]
-                        second_chance_win = True
+                        job.context['sc_trx'] = bonus["trx"]
+                        job.context['sc_win'] = True
                         bet.bet_won = "true"
                         logging.info(
                             f"Job {bet_addr58} - "
                             f"SECOND CHANCE WON! "
-                            f"Amount: {second_chance_trx} "
+                            f"Amount: {job.context['sc_trx']} "
                             f"Probability: {bonus['chance']}% "
                             f"Random number: {random_number * 100} "
-                            f"Won amount: {second_chance_trx} TRX")
+                            f"Won amount: {job.context['sc_trx']} TRX")
                         break
 
                 # SECOND CHANCE LOST
-                if not second_chance_win:
+                if not job.context['sc_win']:
                     bet.bet_won = "false"
 
         logging.info(f"Job {bet_addr58} - "
@@ -534,8 +533,8 @@ class Win(TrxBetBotPlugin):
 
         # --------------- USER WON ---------------
         if bet.bet_won == "true":
-            if second_chance_win:
-                winnings_trx = second_chance_trx
+            if job.context['sc_win']:
+                winnings_trx = job.context['sc_trx']
                 winnings_sun = tron.toSun(winnings_trx)
 
                 msg = self.get_resource("won_second.md")
@@ -560,7 +559,7 @@ class Win(TrxBetBotPlugin):
             # Pay winning amount if not done yet
             if not bet.pay_trx_id:
                 try:
-                    if second_chance_win:
+                    if job.context['sc_win']:
                         params = dict()
                         params["private_key"] = self.config.get("bonus_privkey")
                         params["default_address"] = Address.from_private_key(params["private_key"])["base58"]
@@ -580,7 +579,7 @@ class Win(TrxBetBotPlugin):
 
                     bet.pay_trx_id = send_user["transaction"]["txID"]
 
-                    if second_chance_win:
+                    if job.context['sc_win']:
                         logging.info(f"Job {bet_addr58} - Send from Bonus to User: {send_user}")
                     else:
                         logging.info(f"Job {bet_addr58} - Send from Bot to User: {send_user}")
@@ -595,10 +594,15 @@ class Win(TrxBetBotPlugin):
                     return
 
             # Determine path for winning animation
-            if second_chance_win:
-                image_path = os.path.join(self.get_res_path(), self._SECOND_CHANCE_DIR, str(second_chance_trx))
+            if job.context['sc_win']:
+                image_path = os.path.join(
+                    self.get_res_path(),
+                    self._SECOND_CHANCE_DIR,
+                    str(job.context['sc_trx']))
             else:
-                image_path = os.path.join(self.get_res_path(), self._WON_DIR)
+                image_path = os.path.join(
+                    self.get_res_path(),
+                    self._WON_DIR)
 
         # --------------- BOT WON ---------------
         else:
@@ -677,13 +681,13 @@ class Win(TrxBetBotPlugin):
         self.remove_message(bot, betting_msg, bet_addr58)
 
         # Inform admins that user won with second chance
-        if second_chance_win:
+        if job.context['sc_win']:
             if update.effective_user.username:
                 u = f"@{update.effective_user.username}"
             else:
                 u = update.effective_user.first_name
 
-            msg = f"User {u} just won {second_chance_trx} TRX by second chance"
+            msg = f"User {u} just won {job.context['sc_trx']} TRX by second chance"
             self.notify(msg)
 
             for admin in self.config.get("bonus_notify"):
