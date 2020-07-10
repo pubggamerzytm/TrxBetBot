@@ -3,7 +3,7 @@ import logging
 import trxbetbot.emoji as emo
 import trxbetbot.constants as con
 
-from tronapi import Tron
+from trxbetbot.trxapi import TRXAPI
 from telegram import ParseMode, Chat
 from trxbetbot.plugin import TrxBetBotPlugin
 
@@ -137,9 +137,9 @@ class Airdrop(TrxBetBotPlugin):
         trx_kwargs["private_key"] = user_wallet["data"][0][2]
         trx_kwargs["default_address"] = user_wallet["data"][0][1]
 
-        tron = Tron(**trx_kwargs)
+        tron = TRXAPI(**trx_kwargs)
 
-        balance = tron.trx.get_balance()
+        balance = tron.re(tron.trx.get_balance)
         available_amount = tron.fromSun(balance)
 
         logging.info(f"Balance: {available_amount}")
@@ -155,7 +155,7 @@ class Airdrop(TrxBetBotPlugin):
         bot_addr = self.get_tron().default_address.hex
 
         try:
-            send_bot = tron.trx.send(bot_addr, bot_amount)
+            send_bot = tron.re(tron.trx.send, bot_addr, bot_amount)
 
             # An error was returned
             if "code" in send_bot and "message" in send_bot:
@@ -184,7 +184,7 @@ class Airdrop(TrxBetBotPlugin):
 
             try:
                 # Airdrop TRX to user
-                tip = tron.trx.send(address, usr_amount)
+                tip = tron.re(tron.trx.send, address, usr_amount)
 
                 # An error was returned
                 if "code" in tip and "message" in tip:
