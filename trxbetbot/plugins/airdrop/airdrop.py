@@ -116,7 +116,7 @@ class Airdrop(TrxBetBotPlugin):
                      f"Minus %: {minus_percent} - "
                      f"Amount: {amount} - "
                      f"Bot amount: {bot_amount} - "
-                     f"Fee amount: {fees}"
+                     f"Fee amount: {fees} - "
                      f"User amount: {usr_amount}")
 
         if usr_amount <= self.MIN_AMOUNT:
@@ -170,6 +170,17 @@ class Airdrop(TrxBetBotPlugin):
 
         # Get user data and airdrop TRX
         for user_id in user_ids:
+
+            if self.config.get("direct_msg"):
+                delay = self.config.get("delay")
+
+                # Sleep for configurable time so that bot doesn't get blocked
+                # because it's pushing out more than 30 messages per second
+                if delay and delay > 0:
+                    logging.info(f"Start delay ({delay} seconds)")
+                    time.sleep(delay)
+                    logging.info(f"Stop delay")
+
             res = self.execute_global_sql(sql, user_id)
 
             if not res["success"] or not res["data"]:
@@ -192,21 +203,13 @@ class Airdrop(TrxBetBotPlugin):
 
                 users_str += username + ", "
 
-                if self.config.get("direct_msg"):
-                    delay = self.config.get("delay")
-
-                    # Sleep for configurable time so that bot doesn't get blocked
-                    # because it's pushing out more than 30 messages per second
-                    if delay and delay > 0:
-                        time.sleep(delay)
-
-                    try:
-                        # Send direct message to user that received airdrop
-                        msg = f"Hey {usr_data[2]} you got an airdrop of {usr_amount} TRX from user {tipping_usr}!"
-                        bot.send_message(user_id, msg)
-                    except Exception as e:
-                        msg = f"Can't notify user {username}({user_id}) about airdrop of {usr_amount} TRX"
-                        logging.warning(f"{msg}: {e}")
+                try:
+                    # Send direct message to user that received airdrop
+                    msg = f"Hey {usr_data[2]} you got an airdrop of {usr_amount} TRX from user {tipping_usr}!"
+                    bot.send_message(user_id, msg)
+                except Exception as e:
+                    msg = f"Can't notify user {username}({user_id}) about airdrop of {usr_amount} TRX"
+                    logging.warning(f"{msg}: {e}")
 
                 logging.info(f"Airdropped {usr_amount} TRX to user {username} ({user_id}) at address {address}")
             except Exception as ex:
