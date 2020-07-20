@@ -315,6 +315,8 @@ class Win(TrxBetBotPlugin):
         bet_addr = tron.default_address
         bet_addr58 = bet_addr["base58"]
 
+        bid = f"Job {bet_addr58}"
+
         # Read data for this bet from database
         bet = DBBet(self, bet_addr58, choice, update.effective_user.id)
 
@@ -323,11 +325,11 @@ class Win(TrxBetBotPlugin):
 
         # Check if time limit for balance scanning is reached
         if (start + time_frame) < time.time():
-            logging.info(f"Job {bet_addr58} - Ending job because {time_frame} seconds are over")
+            logging.info(f"{bid} - Ending job because {time_frame} seconds are over")
 
             # Stop repeating job since we reached max time frame to scan for a balance
             job.schedule_removal()
-            logging.info(f"Job {bet_addr58} - Scheduled job for removal")
+            logging.info(f"{bid} - Scheduled job for removal")
 
             # Remove message after betting address isn't valid anymore
             self.remove_message(bot, betting_msg, bet_addr58)
@@ -336,7 +338,7 @@ class Win(TrxBetBotPlugin):
             if bet.usr_amount and bet.usr_amount != 0:
                 # ... check if everything is complete
                 if not bet.is_complete():
-                    msg = f"Job {bet_addr58} - Not all data present"
+                    msg = f"{bid} - Not all data present"
                     logging.error(f"{msg}: {vars(bet)}")
                     self.notify(msg)
             return
@@ -345,23 +347,23 @@ class Win(TrxBetBotPlugin):
             # Get balance (in "Sun") of generated address
             balance = tron.trx.get_balance()
         except Exception as e:
-            logging.error(f"Job {bet_addr58} - Can't retrieve balance: {e}")
+            logging.error(f"{bid} - Can't retrieve balance: {e}")
             return
 
         # Check if balance is 0. If yes, rerun job in specified interval
         if balance == 0:
-            logging.info(f"Job {bet_addr58} - Balance: 0 TRX")
+            logging.info(f"{bid} - Balance: 0 TRX")
             return
 
-        logging.info(f"Job {bet_addr58} - Balance: {tron.fromSun(balance)} TRX")
+        logging.info(f"{bid} - Balance: {tron.fromSun(balance)} TRX")
 
         # Check if we already found a saved transaction
         if not bet.bet_trx_id:
             try:
                 transactions = self.tronscan.get_transactions_for(bet_addr58)
-                logging.info(f"Job {bet_addr58} - Get Transactions: {transactions}")
+                logging.info(f"{bid} - Get Transactions: {transactions}")
             except Exception as e:
-                logging.error(f"Job {bet_addr58} - Can't retrieve transactions: {e}")
+                logging.error(f"{bid} - Can't retrieve transactions: {e}")
                 return
 
             found = False
@@ -395,24 +397,24 @@ class Win(TrxBetBotPlugin):
                                 raise Exception(send["message"])
 
                             msg = "Returned from Generated to User (not first transaction)"
-                            logging.info(f"Job {bet_addr58} - {msg}: {send}")
+                            logging.info(f"{bid} - {msg}: {send}")
                         except Exception as e:
                             msg = "Can't return from Generated to User (not first transaction)"
-                            logging.error(f"Job {bet_addr58} - {msg}: {e}")
+                            logging.error(f"{bid} - {msg}: {e}")
 
         # Check if a transaction was found
         if not bet.bet_trx_id:
-            msg = f"Job {bet_addr58} - No transaction found"
+            msg = f"{bid} - No transaction found"
             logging.error(msg)
             return
         # Check if a user address was found
         if not bet.usr_address:
-            msg = f"Job {bet_addr58} - No user address found"
+            msg = f"{bid} - No user address found"
             logging.error(msg)
             return
         # Check if a user amount was found
         if not bet.usr_amount:
-            msg = f"Job {bet_addr58} - No user amount found"
+            msg = f"{bid} - No user amount found"
             logging.error(msg)
             return
 
@@ -428,10 +430,10 @@ class Win(TrxBetBotPlugin):
             msg = f"{emo.ERROR} Sent amount of {amo} TRX is not inside min ({min} TRX) and max ({max} " \
                   f"TRX) boundaries. Whole amount will be returned to the wallet it was sent from."
 
-            logging.info(f"Job {bet_addr58} - {msg}")
+            logging.info(f"{bid} - {msg}")
 
             self.if_autowin_then_stop(update, msg)
-            logging.info(f"Job {bet_addr58} - Autowin stopped. TRX amount out of min / max boundaries")
+            logging.info(f"{bid} - Autowin stopped. TRX amount out of min / max boundaries")
 
             try:
                 # Send funds from betting address to original address
@@ -441,18 +443,18 @@ class Win(TrxBetBotPlugin):
                 if "code" in send and "message" in send:
                     raise Exception(send["message"])
 
-                logging.info(f"Job {bet_addr58} - Send from Generated to User: {send}")
+                logging.info(f"{bid} - Send from Generated to User: {send}")
             except Exception as e:
-                logging.error(f"Job {bet_addr58} - Can't send from Generated to User: {e}")
+                logging.error(f"{bid} - Can't send from Generated to User: {e}")
                 return
 
             try:
                 update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
             except Exception as e:
-                logging.warning(f"Job {bet_addr58} - Can't send funds back for min / max violation: {e}")
+                logging.warning(f"{bid} - Can't send funds back for min / max violation: {e}")
 
             job.schedule_removal()
-            logging.info(f"Job {bet_addr58} - Scheduled job for removal")
+            logging.info(f"{bid} - Scheduled job for removal")
 
             self.remove_message(bot, betting_msg, bet_addr58)
             return
@@ -461,13 +463,13 @@ class Win(TrxBetBotPlugin):
         if not bet.bet_trx_block:
             try:
                 info = tron.trx.get_transaction_info(bet.bet_trx_id)
-                logging.info(f"Job {bet_addr58} - Get Transaction Info: {info}")
+                logging.info(f"{bid} - Get Transaction Info: {info}")
             except Exception as e:
-                logging.error(f"Job {bet_addr58} - Can't retrieve transaction info: {e}")
+                logging.error(f"{bid} - Can't retrieve transaction info: {e}")
                 return
 
             if "blockNumber" not in info:
-                logging.info(f"Job {bet_addr58} - Key 'blockNumber' not in info: {info}")
+                logging.info(f"{bid} - Key 'blockNumber' not in info: {info}")
                 return
 
             bet.bet_trx_block = info["blockNumber"]
@@ -476,14 +478,14 @@ class Win(TrxBetBotPlugin):
         if not bet.bet_trx_block_hash:
             try:
                 block = tron.trx.get_block(bet.bet_trx_block)
-                logging.info(f"Job {bet_addr58} - Get Block: {block}")
+                logging.info(f"{bid} - Get Block: {block}")
             except Exception as e:
-                logging.error(f"Job {bet_addr58} - Can't retrieve block info: {e}")
+                logging.error(f"{bid} - Can't retrieve block info: {e}")
                 return
 
             bet.bet_trx_block_hash = block["blockID"]
 
-        logging.info(f"Job {bet_addr58} - "
+        logging.info(f"{bid} - "
                      f"TXID: {bet.bet_trx_id} - "
                      f"Sender: {bet.usr_address} - "
                      f"Block: {bet.bet_trx_block} - "
@@ -512,7 +514,7 @@ class Win(TrxBetBotPlugin):
                         job.context['sc_win'] = True
                         bet.bet_won = "true"
                         logging.info(
-                            f"Job {bet_addr58} - "
+                            f"{bid} - "
                             f"SECOND CHANCE WON! "
                             f"Amount: {job.context['sc_trx']} "
                             f"Probability: {bonus['chance']}% "
@@ -524,7 +526,7 @@ class Win(TrxBetBotPlugin):
                 if not job.context['sc_win']:
                     bet.bet_won = "false"
 
-        logging.info(f"Job {bet_addr58} - "
+        logging.info(f"{bid} - "
                      f"WON: {bet.bet_won} "
                      f"Choice: {choice} "
                      f"Hash: {bet.bet_trx_block_hash}")
@@ -554,7 +556,7 @@ class Win(TrxBetBotPlugin):
             msg = msg.replace("{{charswin}}", bet.bet_trx_block_hash[-len(choice):])
 
             log_msg = msg.replace("\n", "")
-            logging.info(f"Job {bet_addr58} - MSG: {log_msg}")
+            logging.info(f"{bid} - MSG: {log_msg}")
 
             # Pay winning amount if not done yet
             if not bet.pay_trx_id:
@@ -580,14 +582,14 @@ class Win(TrxBetBotPlugin):
                     bet.pay_trx_id = send_user["transaction"]["txID"]
 
                     if job.context['sc_win']:
-                        logging.info(f"Job {bet_addr58} - Send from Bonus to User: {send_user}")
+                        logging.info(f"{bid} - Send from Bonus to User: {send_user}")
                     else:
-                        logging.info(f"Job {bet_addr58} - Send from Bot to User: {send_user}")
+                        logging.info(f"{bid} - Send from Bot to User: {send_user}")
                 except Exception as e:
-                    logging.error(f"Job {bet_addr58} - Can't send from Bot to User: {e}")
+                    logging.error(f"{bid} - Can't send from Bot to User: {e}")
 
                     if "Cannot transfer TRX to the same account" in str(e):
-                        logging.info(f"Job {bet_addr58} - Ending job")
+                        logging.info(f"{bid} - Ending job")
                         self.notify(f"Bet {bet_addr58} - {e}")
                         job.schedule_removal()
 
@@ -616,7 +618,7 @@ class Win(TrxBetBotPlugin):
             msg = msg.replace("{{charswin}}", bet.bet_trx_block_hash[-len(choice):])
 
             log_msg = msg.replace("\n", "")
-            logging.info(f"Job {bet_addr58} - MSG: {log_msg}")
+            logging.info(f"{bid} - MSG: {log_msg}")
 
             # Determine path for loosing animation
             image_path = os.path.join(self.get_res_path(), self._LOST_DIR)
@@ -633,21 +635,21 @@ class Win(TrxBetBotPlugin):
                 if "code" in send_bot and "message" in send_bot:
                     raise Exception(send_bot["message"])
 
-                logging.info(f"Job {bet_addr58} - Send from Generated to Bot: {send_bot}")
+                logging.info(f"{bid} - Send from Generated to Bot: {send_bot}")
             except Exception as e:
-                logging.error(f"Job {bet_addr58} - Can't send from Generated to Bot: {e}")
+                logging.error(f"{bid} - Can't send from Generated to Bot: {e}")
                 return
 
             bet.rtn_trx_id = send_bot["transaction"]["txID"]
 
         job.schedule_removal()
-        logging.info(f"Job {bet_addr58} - Scheduled job for removal")
+        logging.info(f"{bid} - Scheduled job for removal")
 
         # Randomly determine image to show to user
         image_choice = random.choice(os.listdir(image_path))
         image_final = os.path.join(image_path, image_choice)
 
-        logging.info(f"Job {bet_addr58} - Chose image to show: {image_final}")
+        logging.info(f"{bid} - Chose image to show: {image_final}")
 
         message = None
 
@@ -662,7 +664,7 @@ class Win(TrxBetBotPlugin):
                     disable_web_page_preview=True,
                     reply_to_message_id=update.message.message_id)
             except Exception as e:
-                logging.error(f"Job {bet_addr58} - Couldn't send outcome message: {e}")
+                logging.error(f"{bid} - Couldn't send outcome message: {e}")
 
         if bet.bet_won == "false":
             if message:
@@ -701,7 +703,7 @@ class Win(TrxBetBotPlugin):
         # Pay out WIN token based on amount of TRX that was wagered
         try:
             if self.config.get("win_bonus_active"):
-                logging.info(f"Job {bet_addr58} - WIN bonus active")
+                logging.info(f"{bid} - WIN bonus active")
 
                 current_month = datetime.today().month
                 current_year = datetime.today().year
@@ -716,21 +718,21 @@ class Win(TrxBetBotPlugin):
 
                         # We found the data that we will use to determine WIN amount to pay
                         if bonus_month == current_month and bonus_year == current_year:
-                            logging.info(f"Job {bet_addr58} - 1 WIN per {trx} TRX")
+                            logging.info(f"{bid} - 1 WIN per {trx} TRX")
                             win_to_pay = amo / float(trx)
 
                             if win_to_pay > 0:
                                 sent_win = TRC20().send("WIN", self.get_tron(), bet.usr_address, win_to_pay)
-                                logging.info(f"Job {bet_addr58} - Payed {win_to_pay} WIN bonus - {sent_win}")
+                                logging.info(f"{bid} - Payed {win_to_pay} WIN to {bet.usr_address}: {sent_win}")
                             else:
-                                logging.info(f"Job {bet_addr58} - No WIN bonus payed")
+                                logging.info(f"{bid} - No WIN bonus payed")
                             break
         except Exception as e:
-            msg = f"Job {bet_addr58} - Couldn't payout WIN bonus: {e}"
+            msg = f"{bid} - Couldn't payout WIN bonus: {e}"
             logging.error(msg)
             self.notify(msg)
 
-        logging.info(f"Job {bet_addr58} - Ending job")
+        logging.info(f"{bid} - Ending job")
 
     def remove_message(self, bot, message, bet_addr58):
         try:

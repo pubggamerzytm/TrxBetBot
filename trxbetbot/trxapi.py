@@ -72,7 +72,7 @@ class TRXAPI(Tron):
             return fun(*args, **kwargs)
         except Exception as e:
             logging.error(
-                f"TRON API: Can't execute: {fun}({args}, {kwargs}) - "
+                f"TRON API: Can't execute: {fun.__name__}({args}, {kwargs}) - "
                 f"Result: {result} - "
                 f"Error: {e} - "
                 f"Changing nodes...")
@@ -86,7 +86,7 @@ class TRXAPI(Tron):
                 return fun(*args, **kwargs)
             except:
                 logging.error(
-                    f"TRON API: Can't execute: {fun}({args}, {kwargs}) - "
+                    f"TRON API: Can't execute: {fun.__name__}({args}, {kwargs}) - "
                     f"Result: {result} - "
                     f"Error: {e} - "
                     f"Giving up...")
@@ -102,7 +102,7 @@ class TRXAPI(Tron):
             if new_node is not self.manager.full_node.node_url:
                 self.manager.full_node.node_url = new_node
                 if self.full_node_connected():
-                    #self.cfg.set(new_node, "tron", "default_full_node")
+                    # self.cfg.set(new_node, "tron", "default_full_node")
                     logging.info(f"TRON API: Changed Full Node to {new_node}")
                     return
                 else:
@@ -121,7 +121,7 @@ class TRXAPI(Tron):
             if new_node is not self.manager.solidity_node.node_url:
                 self.manager.solidity_node.node_url = new_node
                 if self.solidity_node_connected():
-                    #self.cfg.set(new_node, "tron", "default_solidity_node")
+                    # self.cfg.set(new_node, "tron", "default_solidity_node")
                     logging.info(f"TRON API: Changed Solidity Node to {new_node}")
                     return
                 else:

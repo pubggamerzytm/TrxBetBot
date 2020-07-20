@@ -1,3 +1,4 @@
+import logging
 import trxbetbot.constants as con
 
 from trxbetbot.trxapi import TRXAPI
@@ -26,6 +27,8 @@ class TRC20:
                 'value': tron.toSun(amount)
             }
         ]
+
+        logging.info(f"Executing smart contract with following data: {cont_kwargs}")
 
         try:
             # Create raw transaction
