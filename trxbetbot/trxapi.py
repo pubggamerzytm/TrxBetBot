@@ -69,28 +69,39 @@ class TRXAPI(Tron):
         result = None
 
         try:
-            return fun(*args, **kwargs)
+            result = fun(*args, **kwargs)
+            return result
         except Exception as e:
             logging.error(
                 f"TRON API: Can't execute: {fun.__name__}({args}, {kwargs}) - "
                 f"Result: {result} - "
                 f"Error: {e} - "
-                f"Changing nodes...")
+                f"Checking connection to API...")
+
+            f_connected = True
+            s_connected = True
 
             if not self.full_node_connected():
+                f_connected = False
                 self.change_full_node()
             if not self.solidity_node_connected():
+                s_connected = False
                 self.change_solidity_node()
 
+            if f_connected and s_connected:
+                logging.info("Connection to API is working")
+                raise e
+
             try:
-                return fun(*args, **kwargs)
-            except:
+                result = fun(*args, **kwargs)
+                return result
+            except Exception as ex:
                 logging.error(
                     f"TRON API: Can't execute: {fun.__name__}({args}, {kwargs}) - "
                     f"Result: {result} - "
-                    f"Error: {e} - "
+                    f"Error: {ex} - "
                     f"Giving up...")
-                return None
+                raise ex
 
     def change_full_node(self, retry=3):
         # Get server list from config
