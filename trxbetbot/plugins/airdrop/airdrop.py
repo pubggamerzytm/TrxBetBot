@@ -181,9 +181,8 @@ class Airdrop(TrxBetBotPlugin):
                 # Sleep for configurable time so that bot doesn't get blocked
                 # because it's pushing out more than 30 messages per second
                 if delay and delay > 0:
-                    logging.info(f"Start delay ({delay} seconds)")
+                    logging.info(f"Sleeping for {delay} seconds")
                     time.sleep(delay)
-                    logging.info(f"Stop delay")
 
             res = self.execute_global_sql(sql, user_id)
 
