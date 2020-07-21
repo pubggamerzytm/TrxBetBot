@@ -151,6 +151,10 @@ class Airdrop(TrxBetBotPlugin):
             logging.error(f"{msg} - {res_mix}")
             return
 
+        # Send message to user that airdrop will take some time
+        msg = f"{emo.WAIT} Airdrop ongoing. Please wait..."
+        update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
+
         # Send TRX share to bot wallet
         bot_addr = self.get_tron().default_address.hex
 
@@ -168,7 +172,7 @@ class Airdrop(TrxBetBotPlugin):
 
         users_str = str()
 
-        # Get user data and airdrop TRX
+        # Get user data and airdrop TRX to users
         for user_id in user_ids:
 
             if self.config.get("direct_msg"):
