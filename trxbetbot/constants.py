@@ -2,6 +2,8 @@ import os
 
 # Default transaction fee
 TRX_FEE = 0.1
+# Default fee limit
+TRX_FEE_LIMIT = 2
 
 # Project folders
 DIR_SRC = os.path.basename(os.path.dirname(__file__))
