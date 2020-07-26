@@ -15,7 +15,7 @@ class TRC20:
         cont_kwargs = dict()
         cont_kwargs["contract_address"] = tron.address.to_hex(self.SC[ticker.upper()])
         cont_kwargs["function_selector"] = "transfer(address,uint256)"
-        cont_kwargs["fee_limit"] = tron.toSun(con.TRX_FEE)
+        cont_kwargs["fee_limit"] = tron.toSun(con.TRX_FEE_LIMIT)
         cont_kwargs["call_value"] = 0
         cont_kwargs["parameters"] = [
             {
