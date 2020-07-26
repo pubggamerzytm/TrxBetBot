@@ -20,7 +20,7 @@ class TRC20:
         cont_kwargs["parameters"] = [
             {
                 'type': 'address',
-                'value': tron.address.to_hex(to_address)
+                'value': to_address
             },
             {
                 'type': 'uint256',
@@ -28,7 +28,7 @@ class TRC20:
             }
         ]
 
-        logging.info(f"Executing smart contract with following data: {cont_kwargs}")
+        logging.info(f"Executing smart contract for {to_address} with following data: {cont_kwargs}")
 
         try:
             # Create raw transaction
