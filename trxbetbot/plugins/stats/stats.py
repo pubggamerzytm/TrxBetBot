@@ -64,7 +64,7 @@ class Stats(TrxBetBotPlugin):
                 if "amount" in value:
                     trx_amount = value["amount"]
 
-                    if value["to_address"] == addr_hex:
+                    if value["to_address"].upper() == addr_hex.upper():
                         to_bot.append(trx_amount)
                     else:
                         from_bot.append(trx_amount)
