@@ -167,7 +167,6 @@ class Tip(TrxBetBotPlugin):
                 logging.error(f"{msg} - {update}")
             else:
                 update.message.reply_text(f"{emo.ERROR} {repr(e)}")
-                self.notify(e)
 
     def _remove_msg(self, bot, job):
         param_lst = job.context.split("_")
