@@ -41,7 +41,7 @@ class Walletgen(TrxBetBotPlugin):
         bet = res_bet['data'][0][0] if res_bet['data'] else 0
         mix = res_mix['data'][0][0] if res_mix['data'] else 0
         win = res_win['data'][0][0] if res_win['data'] else 0
-        usr = res_global['data'][0][0] if res_global['data'] else 0
+        usr = res_global['data'][0][0] if res_global['data'] else 0  # FIXME: There is no table 'bets' here
         total = bet + mix + win + usr
 
         msg = f"*Generated addresses in last {days} days*\n\n" \
