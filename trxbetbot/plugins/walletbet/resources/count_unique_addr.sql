@@ -1,3 +1,3 @@
 SELECT DISTINCT	usr_address
-FROM bets
+FROM (SELECT * FROM bets WHERE usr_address IS NOT NULL)
 WHERE date_time >= datetime('now', ?)

@@ -32,12 +32,12 @@ class Walletbet(TrxBetBotPlugin):
         res_win = self.execute_sql(sql, f"-{days} day", plugin="win")
 
         # Current data
-        bet = len(res_bet['data'][0]) if res_bet['data'] else 0
-        mix = len(res_mix['data'][0]) if res_mix['data'] else 0
-        win = len(res_win['data'][0]) if res_win['data'] else 0
+        bet = len(res_bet['data']) if res_bet['data'] else 0
+        mix = len(res_mix['data']) if res_mix['data'] else 0
+        win = len(res_win['data']) if res_win['data'] else 0
         total = bet + mix + win
 
-        msg = f"*Users who have bet in last {days} days*\n\n" \
+        msg = f"*Users who placed bets in last {days} days*\n\n" \
               f"`Bet   {bet}`\n" \
               f"`Mix   {mix}`\n" \
               f"`Win   {win}`\n\n" \
