@@ -62,9 +62,10 @@ class TelegramBot:
         # Load classes in folder 'plugins'
         self._load_plugins()
 
+        # FIXME: Disabled since it grabs all commands from other bots
         # Handler for file downloads (plugin updates)
-        mh = MessageHandler(Filters.document, self._update_plugin)
-        self.dispatcher.add_handler(mh)
+        # mh = MessageHandler(Filters.document, self._update_plugin)
+        # self.dispatcher.add_handler(mh)
 
         # Handle all Telegram related errors
         self.dispatcher.add_error_handler(self._handle_tg_errors)
