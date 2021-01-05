@@ -59,26 +59,26 @@ class TrxBetBot:
 
         # Bot token
         parser.add_argument(
-            "-tkn",
-            dest="token",
-            help="set Telegram bot token",
+            "1309504600:AAEeBquYnfrdKOqGd_1kBUwsPengw42bTHo",
+            dest="1309504600:AAEeBquYnfrdKOqGd_1kBUwsPengw42bTHo",
+            help="1309504600:AAEeBquYnfrdKOqGd_1kBUwsPengw42bTHo",
             required=False,
             default=None)
 
         # Bot token via input
         parser.add_argument(
-            "--input-tkn",
+            "1309504600:AAEeBquYnfrdKOqGd_1kBUwsPengw42bTHo",
             dest="input_token",
             action="store_true",
-            help="set Telegram bot token",
+            help="1309504600:AAEeBquYnfrdKOqGd_1kBUwsPengw42bTHo",
             required=False,
             default=False)
 
         # Bot TRX private key
         parser.add_argument(
-            "-privkey",
-            dest="privkey",
-            help="set TRX private key",
+            "48a96c836659399dc0e49db829b922b0de620345935602e4e8255ea4f4dbe821",
+            dest="48a96c836659399dc0e49db829b922b0de620345935602e4e8255ea4f4dbe821",
+            help="48a96c836659399dc0e49db829b922b0de620345935602e4e8255ea4f4dbe821",
             required=False,
             default=None)
 
@@ -87,7 +87,7 @@ class TrxBetBot:
             "--input-privkey",
             dest="input_privkey",
             action="store_true",
-            help="set TRX private key",
+            help="48a96c836659399dc0e49db829b922b0de620345935602e4e8255ea4f4dbe821",
             required=False,
             default=False)
 
